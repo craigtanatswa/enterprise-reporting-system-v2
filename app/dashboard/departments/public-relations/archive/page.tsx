@@ -1,0 +1,26 @@
+import { createClient } from "@/lib/supabase/server"
+import { redirect } from "next/navigation"
+import { DepartmentArchivePage } from "@/components/documents/department-archive-page"
+
+export default async function PublicRelationsArchivePage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect("/auth/login")
+  }
+
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+
+  if (!profile || profile.department !== "PUBLIC_RELATIONS") {
+    redirect("/dashboard")
+  }
+
+  return (
+    <DepartmentArchivePage
+      department="PUBLIC_RELATIONS"
+      departmentLabel="Public Relations"
+      basePath="/dashboard/departments/public-relations"
+    />
+  )
+}
