@@ -22,11 +22,16 @@ export const ACTIVITY_TYPES = [
 ]
 
 export function getDepartmentDashboardUrl(department: Department | null, subdepartment?: string | null): string {
+  // Managing Director — goes straight to the restricted MD dashboard
+  if (department === "OFFICE_OF_THE_MANAGING_DIRECTOR") {
+    return "/dashboard/md"
+  }
+
   // Factory is special - goes to operational dashboard first
   if (subdepartment === "FACTORY") {
     return "/dashboard/departments/factory"
   }
-  
+
   // All other departments go to Documents as primary
   if (subdepartment === "AGRONOMY") {
     return "/dashboard/departments/agronomy/documents"
@@ -34,6 +39,7 @@ export function getDepartmentDashboardUrl(department: Department | null, subdepa
 
   // Regular departments - Documents is primary landing page
   const departmentMap: Record<Department, string> = {
+    OFFICE_OF_THE_MANAGING_DIRECTOR: "/dashboard/md",
     AUDIT: "/dashboard/departments/audit/documents",
     OPERATIONS: "/dashboard",
     FINANCE: "/dashboard/departments/finance/documents",
@@ -50,6 +56,13 @@ export function getDepartmentDashboardUrl(department: Department | null, subdepa
 }
 
 export function getDepartmentSpecificNavigation(department: Department | null, subdepartment?: string | null) {
+  // Managing Director — dedicated navigation for MD dashboard
+  const mdNavigation = [
+    { icon: "Crown", label: "MD Dashboard", href: "/dashboard/md" },
+    { icon: "Lock", label: "Confidential Reports", href: "/dashboard/md/reports" },
+    { icon: "CheckCircle2", label: "Acknowledgements", href: "/dashboard/md/acknowledgements" },
+  ]
+
   // Factory has operational dashboard first, then documents
   const factoryNavigation = [
     { icon: "Factory", label: "Factory Dashboard", href: "/dashboard/departments/factory" },
@@ -122,6 +135,9 @@ export function getDepartmentSpecificNavigation(department: Department | null, s
     ],
   }
 
+  if (department === "OFFICE_OF_THE_MANAGING_DIRECTOR") {
+    return mdNavigation
+  }
   if (subdepartment === "FACTORY") {
     return factoryNavigation
   }

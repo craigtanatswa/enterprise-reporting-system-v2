@@ -34,9 +34,9 @@ export default async function UsersPage() {
           <p className="text-muted-foreground">Manage user accounts, roles, and permissions</p>
         </div>
         <Button asChild>
-          <Link href="/dashboard/users/invite">
+          <Link href="/dashboard/users/add">
             <UserPlus className="mr-2 h-4 w-4" />
-            Invite User
+            Add New User
           </Link>
         </Button>
       </div>

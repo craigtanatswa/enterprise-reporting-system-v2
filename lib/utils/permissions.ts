@@ -18,6 +18,7 @@ export type Department =
   | "ICT_AND_DIGITAL_TRANSFORMATION"
   | "PROCUREMENT"
   | "PUBLIC_RELATIONS"
+  | "OFFICE_OF_THE_MANAGING_DIRECTOR"
 
 export type SubDepartment = "AGRONOMY" | "FACTORY"
 
@@ -146,6 +147,7 @@ export function getDepartmentLabel(department: Department): string {
     ICT_AND_DIGITAL_TRANSFORMATION: "ICT & Digital Transformation",
     PROCUREMENT: "Procurement",
     PUBLIC_RELATIONS: "Public Relations",
+    OFFICE_OF_THE_MANAGING_DIRECTOR: "The Office of the Managing Director",
   }
   return labels[department] || department
 }
@@ -176,6 +178,15 @@ export function canAccessAuditFeatures(role: UserRole): boolean {
 
 export function canViewConfidentialReports(role: UserRole): boolean {
   return hasPermission(role, "viewConfidentialAuditReports")
+}
+
+/**
+ * Gate for /dashboard/md and all nested routes.
+ * Only MANAGING_DIRECTOR may enter; BOOTSTRAP_ADMIN included for
+ * initial system setup only.
+ */
+export function canViewMDDashboard(role: UserRole): boolean {
+  return role === "MANAGING_DIRECTOR" || role === "BOOTSTRAP_ADMIN"
 }
 
 export function canUploadConfidentialReports(role: UserRole): boolean {
