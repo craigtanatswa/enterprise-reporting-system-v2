@@ -16,7 +16,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Bell, LogOut, User } from "lucide-react"
 import { supabase } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 
 export function DashboardHeader() {
   const router = useRouter()
