@@ -100,8 +100,8 @@ export default function SignUpPage() {
       <div className="w-full max-w-md">
         <div className="flex flex-col gap-6">
           <div className="flex flex-col items-center gap-2 text-center">
-            <div className="relative h-20 w-32">
-              <Image src="/images/arda-logo.png" alt="ARDA Seeds" fill className="object-contain" priority />
+            <div className="relative h-30 w-48">
+              <Image src="/arda-logo.png" alt="ARDA Seeds" fill className="object-contain" priority />
             </div>
             <p className="text-sm text-muted-foreground">Enterprise Reporting Platform</p>
             {isFirstUser && (

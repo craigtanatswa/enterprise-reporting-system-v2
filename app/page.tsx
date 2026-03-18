@@ -21,11 +21,11 @@ export default async function HomePage() {
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="relative h-10 w-16">
-              <Image src="/images/arda-logo.png" alt="ARDA Seeds" fill className="object-contain" />
+          <Link href="/" className="flex items-center gap-2">
+            <div className="relative h-15 w-24">
+              <Image src="/arda-logo.png" alt="ARDA Seeds" fill className="object-contain" priority />
             </div>
-          </div>
+          </Link>
           <div className="flex items-center gap-4">
             <Button variant="ghost" asChild>
               <Link href="/auth/login">Sign In</Link>
@@ -64,7 +64,7 @@ export default async function HomePage() {
 
       {/* Features Grid */}
       <section className="container py-16 md:py-24">
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+        <div className="mx-auto grid max-w-5xl gap-8 md:grid-cols-2 lg:grid-cols-4">
           <div className="flex flex-col gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <BarChart3 className="h-6 w-6" />
@@ -105,11 +105,11 @@ export default async function HomePage() {
       {/* Footer */}
       <footer className="mt-auto border-t bg-muted/40 py-8">
         <div className="container flex flex-col items-center justify-between gap-4 md:flex-row">
-          <div className="flex items-center gap-2">
-            <div className="relative h-8 w-14">
-              <Image src="/images/arda-logo.png" alt="ARDA Seeds" fill className="object-contain" />
+          <Link href="/" className="flex items-center gap-2">
+            <div className="relative h-12 w-20">
+              <Image src="/arda-logo.png" alt="ARDA Seeds" fill className="object-contain" />
             </div>
-          </div>
+          </Link>
           <p className="text-sm text-muted-foreground">© 2025 ARDA Seeds Pvt Ltd. All rights reserved.</p>
         </div>
       </footer>

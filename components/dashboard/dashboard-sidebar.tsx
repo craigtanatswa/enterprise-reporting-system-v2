@@ -119,11 +119,11 @@ export function DashboardSidebar() {
   return (
     <Sidebar>
       <SidebarHeader className="border-b p-4">
-        <div className="flex items-center gap-2">
-          <div className="relative h-10 w-16">
-            <Image src="/images/arda-logo.png" alt="ARDA Seeds" fill className="object-contain" />
+        <Link href="/dashboard" className="flex items-center gap-2">
+          <div className="relative h-15 w-24">
+            <Image src="/arda-logo.png" alt="ARDA Seeds" fill className="object-contain" priority />
           </div>
-        </div>
+        </Link>
       </SidebarHeader>
 
       <SidebarContent>

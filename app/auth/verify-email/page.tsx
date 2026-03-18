@@ -2,8 +2,9 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Mail, Building2, Clock, AlertCircle } from "lucide-react"
+import { Mail, Clock, AlertCircle } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 import { useSearchParams } from "next/navigation"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
@@ -17,10 +18,10 @@ export default function VerifyEmailPage() {
       <div className="w-full max-w-md">
         <div className="flex flex-col gap-6">
           <div className="flex flex-col items-center gap-2 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-              <Building2 className="h-6 w-6" />
+            <div className="relative h-30 w-48">
+              <Image src="/arda-logo.png" alt="ARDA Seeds" fill className="object-contain" priority />
             </div>
-            <h1 className="text-2xl font-semibold tracking-tight">ARDA Seeds</h1>
+            <p className="text-sm text-muted-foreground">Enterprise Reporting Platform</p>
           </div>
 
           <Card>

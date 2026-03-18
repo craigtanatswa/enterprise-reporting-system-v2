@@ -2,6 +2,8 @@
 
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
+import Image from "next/image"
+import Link from "next/link"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +30,11 @@ export function DashboardHeader() {
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <SidebarTrigger />
+      <Link href="/dashboard" className="flex items-center shrink-0">
+        <div className="relative h-12 w-18">
+          <Image src="/arda-logo.png" alt="ARDA Seeds" fill className="object-contain" />
+        </div>
+      </Link>
       <div className="flex flex-1 items-center justify-end gap-4">
         <Button variant="ghost" size="icon" className="relative" asChild>
           <Link href="/dashboard/notifications">
