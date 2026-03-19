@@ -86,14 +86,18 @@ export default async function ReportsPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">{report.status}</Badge>
-                    <Button variant="ghost" size="sm" asChild>
+                    <Button variant="ghost" size="sm" asChild title="View">
                       <Link href={`/dashboard/reports/${report.id}`}>
                         <Eye className="h-4 w-4" />
                       </Link>
                     </Button>
-                    <Button variant="ghost" size="sm">
-                      <Download className="h-4 w-4" />
-                    </Button>
+                    {report.file_url && (
+                      <Button variant="ghost" size="sm" asChild title="Download">
+                        <a href={report.file_url} download={report.file_name}>
+                          <Download className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}

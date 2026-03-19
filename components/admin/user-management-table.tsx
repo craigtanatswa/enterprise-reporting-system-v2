@@ -195,7 +195,8 @@ export function UserManagementTable({ users, currentUserId, currentUserRole }: U
     "ADMIN",
     "MANAGING_DIRECTOR",
     "AUDITOR",
-    "EXECUTIVE",
+    "GENERAL_MANAGER",
+    "CORPORATE_SERVICES_MANAGER",
     "HEAD_OF_DEPARTMENT",
     "STAFF",
   ]
@@ -211,6 +212,7 @@ export function UserManagementTable({ users, currentUserId, currentUserRole }: U
     "ICT_AND_DIGITAL_TRANSFORMATION",
     "PROCUREMENT",
     "PUBLIC_RELATIONS",
+    "OFFICE_OF_CORPORATE_SERVICES",
   ]
 
   return (

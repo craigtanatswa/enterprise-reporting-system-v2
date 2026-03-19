@@ -21,7 +21,21 @@ export const ACTIVITY_TYPES = [
   { value: "seed_dispatched", label: "Seed Dispatched" },
 ]
 
-export function getDepartmentDashboardUrl(department: Department | null, subdepartment?: string | null): string {
+export function getDepartmentDashboardUrl(
+  department: Department | null,
+  subdepartment?: string | null,
+  role?: string
+): string {
+  // General Manager — lands on GM dashboard (Operations reports)
+  if (role === "GENERAL_MANAGER") {
+    return "/dashboard/gm"
+  }
+
+  // Corporate Services Manager — lands on CSM dashboard
+  if (role === "CORPORATE_SERVICES_MANAGER") {
+    return "/dashboard/csm"
+  }
+
   // Managing Director — default landing: Submitted Reports (aggregated across all departments)
   if (department === "OFFICE_OF_THE_MANAGING_DIRECTOR") {
     return "/dashboard/md/reports"

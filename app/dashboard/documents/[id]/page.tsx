@@ -20,7 +20,14 @@ export default async function DocumentDetailPage({
   searchParams: Promise<{ returnTo?: string; from?: string }>
 }) {
   const { returnTo, from } = await searchParams
-  const backHref = returnTo || (from === "md" ? "/dashboard/md/reports" : "/dashboard/documents")
+  let backHref = returnTo || "/dashboard/documents"
+  if (!returnTo) {
+    if (from === "md") backHref = "/dashboard/md/reports"
+    else if (from === "supervisor" && profile) {
+      if (profile.role === "GENERAL_MANAGER") backHref = "/dashboard/gm"
+      else if (profile.role === "CORPORATE_SERVICES_MANAGER") backHref = "/dashboard/csm"
+    }
+  }
 
   const supabase = await createClient()
   const {

@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 import type { UserRole, Department, SubDepartment } from "@/lib/utils/permissions"
+import { SINGLE_HOLDER_ROLES } from "@/lib/utils/permissions"
 
 interface ApproveAccountParams {
   userId: string
@@ -29,6 +30,24 @@ export async function approveAccount(params: ApproveAccountParams) {
 
   if (!approverProfile || !["ADMIN", "BOOTSTRAP_ADMIN"].includes(approverProfile.role)) {
     return { success: false, error: "Insufficient permissions" }
+  }
+
+  // Only one GM and one CSM per system
+  if (params.assignRole && SINGLE_HOLDER_ROLES.includes(params.assignRole)) {
+    const { data: existing } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("role", params.assignRole)
+      .eq("is_active", true)
+      .neq("id", params.userId)
+      .limit(1)
+      .single()
+    if (existing) {
+      return {
+        success: false,
+        error: `There is already a ${params.assignRole === "GENERAL_MANAGER" ? "General Manager" : "Corporate Services Manager"} assigned. Only one can hold this role.`,
+      }
+    }
   }
 
   try {
@@ -229,10 +248,32 @@ export async function changeUserRole(userId: string, newRole: UserRole, reason?:
     return { success: false, error: "Only Bootstrap Admin can create administrators" }
   }
 
+  // Only one General Manager and one Corporate Services Manager per system
+  if (SINGLE_HOLDER_ROLES.includes(newRole)) {
+    const { data: existing } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("role", newRole)
+      .eq("is_active", true)
+      .neq("id", userId)
+      .limit(1)
+      .single()
+    if (existing) {
+      return {
+        success: false,
+        error: `There is already a ${newRole === "GENERAL_MANAGER" ? "General Manager" : "Corporate Services Manager"} assigned. Only one can hold this role.`,
+      }
+    }
+  }
+
   try {
     const { data: targetUser } = await supabase.from("profiles").select("role").eq("id", userId).single()
 
-    const { error: updateError } = await supabase.from("profiles").update({ role: newRole }).eq("id", userId)
+    const updates: Record<string, unknown> = { role: newRole }
+    if (newRole === "GENERAL_MANAGER") updates.department = "OPERATIONS"
+    if (newRole === "CORPORATE_SERVICES_MANAGER") updates.department = "OFFICE_OF_CORPORATE_SERVICES"
+
+    const { error: updateError } = await supabase.from("profiles").update(updates).eq("id", userId)
 
     if (updateError) throw updateError
 
@@ -254,6 +295,31 @@ export async function changeUserRole(userId: string, newRole: UserRole, reason?:
     console.error("[v0] Error changing user role:", error)
     return { success: false, error: error.message || "Failed to change user role" }
   }
+}
+
+export async function canAssignSingleHolderRole(role: string, excludeUserId?: string): Promise<{ ok: boolean; error?: string }> {
+  if (!["GENERAL_MANAGER", "CORPORATE_SERVICES_MANAGER"].includes(role)) {
+    return { ok: true }
+  }
+
+  const supabase = await createClient()
+  let query = supabase
+    .from("profiles")
+    .select("id")
+    .eq("role", role)
+    .eq("is_active", true)
+  if (excludeUserId) {
+    query = query.neq("id", excludeUserId)
+  }
+  const { data } = await query.limit(1).single()
+
+  if (data) {
+    return {
+      ok: false,
+      error: `There is already a ${role === "GENERAL_MANAGER" ? "General Manager" : "Corporate Services Manager"} assigned. Only one can hold this role.`,
+    }
+  }
+  return { ok: true }
 }
 
 export async function getPendingApprovals() {

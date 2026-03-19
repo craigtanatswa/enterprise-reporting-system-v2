@@ -3,7 +3,9 @@ export type UserRole =
   | "ADMIN"
   | "MANAGING_DIRECTOR"
   | "AUDITOR"
-  | "EXECUTIVE"
+  | "EXECUTIVE" // Deprecated - use GM or CSM; retained for migration
+  | "GENERAL_MANAGER"
+  | "CORPORATE_SERVICES_MANAGER"
   | "HEAD_OF_DEPARTMENT"
   | "STAFF"
 
@@ -19,6 +21,7 @@ export type Department =
   | "PROCUREMENT"
   | "PUBLIC_RELATIONS"
   | "OFFICE_OF_THE_MANAGING_DIRECTOR"
+  | "OFFICE_OF_CORPORATE_SERVICES"
 
 export type SubDepartment = "AGRONOMY" | "FACTORY"
 
@@ -90,6 +93,32 @@ export const ROLE_PERMISSIONS = {
     viewConfidentialAuditReports: false,
     approveAccounts: false,
   },
+  GENERAL_MANAGER: {
+    viewAll: false,
+    manageUsers: false,
+    createAdmin: false,
+    promoteToAdmin: false,
+    approveDocuments: true,
+    accessAllDepartments: false,
+    exportReports: true,
+    viewAuditLogs: false,
+    systemConfiguration: false,
+    viewConfidentialAuditReports: false,
+    approveAccounts: false,
+  },
+  CORPORATE_SERVICES_MANAGER: {
+    viewAll: false,
+    manageUsers: false,
+    createAdmin: false,
+    promoteToAdmin: false,
+    approveDocuments: true,
+    accessAllDepartments: false,
+    exportReports: true,
+    viewAuditLogs: false,
+    systemConfiguration: false,
+    viewConfidentialAuditReports: false,
+    approveAccounts: false,
+  },
   HEAD_OF_DEPARTMENT: {
     viewAll: false,
     manageUsers: false,
@@ -128,7 +157,9 @@ export function getRoleLabel(role: UserRole): string {
     ADMIN: "Administrator",
     MANAGING_DIRECTOR: "Managing Director",
     AUDITOR: "Auditor",
-    EXECUTIVE: "Executive",
+    EXECUTIVE: "Executive (Deprecated)",
+    GENERAL_MANAGER: "General Manager",
+    CORPORATE_SERVICES_MANAGER: "Corporate Services Manager",
     HEAD_OF_DEPARTMENT: "Head of Department",
     STAFF: "Staff",
   }
@@ -148,6 +179,7 @@ export function getDepartmentLabel(department: Department): string {
     PROCUREMENT: "Procurement",
     PUBLIC_RELATIONS: "Public Relations",
     OFFICE_OF_THE_MANAGING_DIRECTOR: "The Office of the Managing Director",
+    OFFICE_OF_CORPORATE_SERVICES: "Office of Corporate Services",
   }
   return labels[department] || department
 }
@@ -203,4 +235,15 @@ export function isManagingDirector(role: UserRole): boolean {
 
 export function canApproveAccounts(role: UserRole): boolean {
   return hasPermission(role, "approveAccounts")
+}
+
+/** Single-holder roles: only one user per system */
+export const SINGLE_HOLDER_ROLES: UserRole[] = ["GENERAL_MANAGER", "CORPORATE_SERVICES_MANAGER"]
+
+export function isGeneralManager(role: UserRole): boolean {
+  return role === "GENERAL_MANAGER"
+}
+
+export function isCorporateServicesManager(role: UserRole): boolean {
+  return role === "CORPORATE_SERVICES_MANAGER"
 }

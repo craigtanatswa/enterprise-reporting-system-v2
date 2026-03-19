@@ -1,0 +1,9 @@
+-- =====================================================
+-- ARDA Seeds: Add General Manager and Corporate Services Manager roles
+-- Replaces EXECUTIVE - only one GM and one CSM per system
+--
+-- IMPORTANT: PostgreSQL requires new enum values to be committed before use.
+-- Run in two steps:
+--   1. Run 018a_add_enum_values.sql  (adds enum values)
+--   2. Run 018b_add_gm_csm_rest.sql  (INSERT + RLS policies)
+-- =====================================================

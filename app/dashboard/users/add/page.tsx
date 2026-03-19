@@ -15,11 +15,13 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { Info, ArrowLeft, UserPlus, CheckCircle2, Crown } from "lucide-react"
+import { canAssignSingleHolderRole } from "@/lib/actions/user-management"
 
 const ROLE_OPTIONS = [
   { value: "STAFF", label: "Staff" },
   { value: "HEAD_OF_DEPARTMENT", label: "Head of Department" },
-  { value: "EXECUTIVE", label: "Executive" },
+  { value: "GENERAL_MANAGER", label: "General Manager" },
+  { value: "CORPORATE_SERVICES_MANAGER", label: "Corporate Services Manager" },
   { value: "AUDITOR", label: "Auditor" },
   { value: "ADMIN", label: "Admin" },
   { value: "MANAGING_DIRECTOR", label: "Managing Director" },
@@ -29,6 +31,10 @@ const ROLE_OPTIONS = [
 const MD_ROLE = "MANAGING_DIRECTOR"
 const MD_DEPARTMENT = "OFFICE_OF_THE_MANAGING_DIRECTOR"
 const MD_DEPARTMENT_LABEL = "The Office of the Managing Director"
+const GM_ROLE = "GENERAL_MANAGER"
+const GM_DEPARTMENT = "OPERATIONS"
+const CSM_ROLE = "CORPORATE_SERVICES_MANAGER"
+const CSM_DEPARTMENT = "OFFICE_OF_CORPORATE_SERVICES"
 
 export default function AdminAddUserPage() {
   const [formData, setFormData] = useState({
@@ -47,6 +53,9 @@ export default function AdminAddUserPage() {
   const router = useRouter()
 
   const isMDRole = formData.role === MD_ROLE
+  const isGMRole = formData.role === GM_ROLE
+  const isCSMRole = formData.role === CSM_ROLE
+  const isDepartmentLocked = isMDRole || isGMRole || isCSMRole
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -54,19 +63,32 @@ export default function AdminAddUserPage() {
 
   const handleRoleChange = (value: string) => {
     if (value === MD_ROLE) {
-      // Auto-assign the MD's department and clear sub-department
       setFormData((prev) => ({
         ...prev,
         role: value,
         department: MD_DEPARTMENT,
         subDepartment: "",
       }))
-    } else {
-      // If switching away from MD, clear the locked department
+    } else if (value === GM_ROLE) {
       setFormData((prev) => ({
         ...prev,
         role: value,
-        department: prev.department === MD_DEPARTMENT ? "" : prev.department,
+        department: GM_DEPARTMENT,
+        subDepartment: "",
+      }))
+    } else if (value === CSM_ROLE) {
+      setFormData((prev) => ({
+        ...prev,
+        role: value,
+        department: CSM_DEPARTMENT,
+        subDepartment: "",
+      }))
+    } else {
+      const lockedDepts = [MD_DEPARTMENT, GM_DEPARTMENT, CSM_DEPARTMENT]
+      setFormData((prev) => ({
+        ...prev,
+        role: value,
+        department: lockedDepts.includes(prev.department) ? "" : prev.department,
         subDepartment: "",
       }))
     }
@@ -96,10 +118,23 @@ export default function AdminAddUserPage() {
       return
     }
 
-    if (formData.department === "OPERATIONS" && !formData.subDepartment) {
-      setError("Please select a sub-department for Operations")
+    if (
+      formData.department === "OPERATIONS" &&
+      !formData.subDepartment &&
+      formData.role !== GM_ROLE
+    ) {
+      setError("Please select a sub-department for Operations (except for General Manager)")
       setIsLoading(false)
       return
+    }
+
+    if (formData.role === GM_ROLE || formData.role === CSM_ROLE) {
+      const { ok, error: roleError } = await canAssignSingleHolderRole(formData.role)
+      if (!ok) {
+        setError(roleError)
+        setIsLoading(false)
+        return
+      }
     }
 
     try {
@@ -216,6 +251,32 @@ export default function AdminAddUserPage() {
         </Alert>
       )}
 
+      {/* GM role callout */}
+      {isGMRole && (
+        <Alert className="border-blue-500/30 bg-blue-500/10">
+          <AlertDescription className="text-sm">
+            <p className="font-medium text-blue-800 dark:text-blue-400">General Manager account</p>
+            <p className="text-blue-700 dark:text-blue-500 mt-1">
+              Oversees Operations (including Manufacturing and Agronomy). Only one General Manager per system. Department
+              is set to <strong>Operations</strong>.
+            </p>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* CSM role callout */}
+      {isCSMRole && (
+        <Alert className="border-blue-500/30 bg-blue-500/10">
+          <AlertDescription className="text-sm">
+            <p className="font-medium text-blue-800 dark:text-blue-400">Corporate Services Manager account</p>
+            <p className="text-blue-700 dark:text-blue-500 mt-1">
+              Oversees Marketing, Legal, HR, Properties, and ICT. Only one Corporate Services Manager per system.
+              Department is set to <strong>Office of Corporate Services</strong>.
+            </p>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Form */}
       <Card>
         <CardHeader>
@@ -299,7 +360,7 @@ export default function AdminAddUserPage() {
                 <div className="grid gap-2">
                   <Label htmlFor="department">
                     Department *
-                    {isMDRole && (
+                    {isDepartmentLocked && (
                       <Badge variant="outline" className="ml-1 text-xs font-normal border-amber-500/40 text-amber-700 dark:text-amber-400">
                         Auto-assigned
                       </Badge>
@@ -308,6 +369,14 @@ export default function AdminAddUserPage() {
                   {isMDRole ? (
                     <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted px-3 py-1 text-sm text-muted-foreground cursor-not-allowed">
                       {MD_DEPARTMENT_LABEL}
+                    </div>
+                  ) : isGMRole ? (
+                    <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted px-3 py-1 text-sm text-muted-foreground cursor-not-allowed">
+                      Operations
+                    </div>
+                  ) : isCSMRole ? (
+                    <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted px-3 py-1 text-sm text-muted-foreground cursor-not-allowed">
+                      Office of Corporate Services
                     </div>
                   ) : (
                     <Select
@@ -339,8 +408,8 @@ export default function AdminAddUserPage() {
                 </div>
               </div>
 
-              {/* Operations sub-department (hidden for MD) */}
-              {!isMDRole && formData.department === "OPERATIONS" && (
+              {/* Operations sub-department (hidden for MD, GM) */}
+              {!isMDRole && !isGMRole && formData.department === "OPERATIONS" && (
                 <div className="grid gap-2">
                   <Label htmlFor="subDepartment">Sub-Department *</Label>
                   <Select

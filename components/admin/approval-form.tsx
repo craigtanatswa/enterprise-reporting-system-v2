@@ -108,7 +108,8 @@ export function ApprovalForm({ userId, currentRole }: ApprovalFormProps) {
             <SelectContent>
               <SelectItem value="STAFF">Staff</SelectItem>
               <SelectItem value="HEAD_OF_DEPARTMENT">Head of Department</SelectItem>
-              <SelectItem value="EXECUTIVE">Executive</SelectItem>
+              <SelectItem value="GENERAL_MANAGER">General Manager</SelectItem>
+              <SelectItem value="CORPORATE_SERVICES_MANAGER">Corporate Services Manager</SelectItem>
               <SelectItem value="AUDITOR">Auditor</SelectItem>
               <SelectItem value="MANAGING_DIRECTOR">Managing Director</SelectItem>
             </SelectContent>

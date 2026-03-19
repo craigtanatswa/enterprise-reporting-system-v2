@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { GM_DEPARTMENT, CSM_DEPARTMENTS } from "@/lib/utils/reporting-structure"
 
 export async function POST(
   _request: Request,
@@ -27,19 +28,38 @@ export async function POST(
       return NextResponse.json({ error: "Profile not found" }, { status: 404 })
     }
 
-    const allowedRoles = ["MANAGING_DIRECTOR", "BOOTSTRAP_ADMIN", "ADMIN", "EXECUTIVE", "HEAD_OF_DEPARTMENT"]
+    const allowedRoles = [
+      "MANAGING_DIRECTOR",
+      "BOOTSTRAP_ADMIN",
+      "ADMIN",
+      "EXECUTIVE",
+      "GENERAL_MANAGER",
+      "CORPORATE_SERVICES_MANAGER",
+      "HEAD_OF_DEPARTMENT",
+    ]
     if (!allowedRoles.includes(profile.role)) {
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 })
     }
 
     const { data: doc, error: fetchError } = await supabase
       .from("documents")
-      .select("id, status")
+      .select("id, status, department")
       .eq("id", id)
       .single()
 
     if (fetchError || !doc) {
       return NextResponse.json({ error: "Document not found" }, { status: 404 })
+    }
+
+    // GM can only review Operations documents; CSM only Corporate Services departments
+    if (profile.role === "GENERAL_MANAGER" && doc.department !== GM_DEPARTMENT) {
+      return NextResponse.json({ error: "You can only review Operations department documents" }, { status: 403 })
+    }
+    if (profile.role === "CORPORATE_SERVICES_MANAGER" && !CSM_DEPARTMENTS.includes(doc.department as any)) {
+      return NextResponse.json(
+        { error: "You can only review documents from your supervised departments" },
+        { status: 403 }
+      )
     }
 
     if (doc.status !== "submitted") {
