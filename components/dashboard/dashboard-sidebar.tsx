@@ -127,6 +127,30 @@ export function DashboardSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
+        {departmentNavItems.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Department</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {departmentNavItems.map((item) => {
+                  const Icon = iconMap[item.icon] || FileText
+                  const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton asChild isActive={isActive}>
+                        <Link href={item.href}>
+                          <Icon className="h-4 w-4" />
+                          <span>{item.label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
         {/* Balance Scorecard - Available to all staff and HODs */}
         <SidebarGroup>
           <SidebarGroupLabel>Performance Management</SidebarGroupLabel>
@@ -160,30 +184,6 @@ export function DashboardSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-
-        {departmentNavItems.length > 0 && (
-          <SidebarGroup>
-            <SidebarGroupLabel>Department</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {departmentNavItems.map((item) => {
-                  const Icon = iconMap[item.icon] || FileText
-                  const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
-                  return (
-                    <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton asChild isActive={isActive}>
-                        <Link href={item.href}>
-                          <Icon className="h-4 w-4" />
-                          <span>{item.label}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
 
         {shouldShowAudit && (
           <SidebarGroup>

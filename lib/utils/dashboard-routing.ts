@@ -22,9 +22,9 @@ export const ACTIVITY_TYPES = [
 ]
 
 export function getDepartmentDashboardUrl(department: Department | null, subdepartment?: string | null): string {
-  // Managing Director — goes straight to the restricted MD dashboard
+  // Managing Director — default landing: Submitted Reports (aggregated across all departments)
   if (department === "OFFICE_OF_THE_MANAGING_DIRECTOR") {
-    return "/dashboard/md"
+    return "/dashboard/md/reports"
   }
 
   // Factory is special - goes to operational dashboard first
@@ -56,82 +56,88 @@ export function getDepartmentDashboardUrl(department: Department | null, subdepa
 }
 
 export function getDepartmentSpecificNavigation(department: Department | null, subdepartment?: string | null) {
-  // Managing Director — dedicated navigation for MD dashboard
+  // Managing Director — Submitted Reports is default/primary; MD Dashboard for confidential audit reports
   const mdNavigation = [
+    { icon: "Eye", label: "Submitted Reports", href: "/dashboard/md/reports" },
     { icon: "Crown", label: "MD Dashboard", href: "/dashboard/md" },
-    { icon: "Lock", label: "Confidential Reports", href: "/dashboard/md/reports" },
     { icon: "CheckCircle2", label: "Acknowledgements", href: "/dashboard/md/acknowledgements" },
   ]
 
-  // Factory has operational dashboard first, then documents
+  // Factory: same order as all departments: Dashboard, Documents (primary), Archive, Guidelines
   const factoryNavigation = [
-    { icon: "Factory", label: "Factory Dashboard", href: "/dashboard/departments/factory" },
+    { icon: "LayoutDashboard", label: "Dashboard", href: "/dashboard/departments/factory" },
     { icon: "FileText", label: "Documents", href: "/dashboard/departments/factory/documents" },
     { icon: "Archive", label: "Archive / History", href: "/dashboard/departments/factory/archive" },
     { icon: "BookOpen", label: "Guidelines", href: "/dashboard/departments/factory/guidelines" },
   ]
 
-  // All other departments: Documents first (primary), then dashboard (secondary)
+  // All departments: exact order per spec: 1. Dashboard, 2. Documents (DEFAULT & PRIMARY), 3. Archive, 4. Guidelines
   const standardNavigation: Record<string, Array<{ icon: string; label: string; href: string }>> = {
     FINANCE: [
-      { icon: "FileText", label: "Documents", href: "/dashboard/departments/finance/documents" },
       { icon: "LayoutDashboard", label: "Dashboard", href: "/dashboard/departments/finance/dashboard" },
+      { icon: "FileText", label: "Documents", href: "/dashboard/departments/finance/documents" },
       { icon: "Archive", label: "Archive / History", href: "/dashboard/departments/finance/archive" },
       { icon: "BookOpen", label: "Guidelines", href: "/dashboard/departments/finance/guidelines" },
     ],
     MARKETING_AND_SALES: [
-      { icon: "FileText", label: "Documents", href: "/dashboard/departments/marketing/documents" },
       { icon: "LayoutDashboard", label: "Dashboard", href: "/dashboard/departments/marketing/dashboard" },
+      { icon: "FileText", label: "Documents", href: "/dashboard/departments/marketing/documents" },
       { icon: "Archive", label: "Archive / History", href: "/dashboard/departments/marketing/archive" },
       { icon: "BookOpen", label: "Guidelines", href: "/dashboard/departments/marketing/guidelines" },
     ],
     HUMAN_RESOURCES_AND_ADMINISTRATION: [
-      { icon: "FileText", label: "Documents", href: "/dashboard/departments/hr/documents" },
       { icon: "LayoutDashboard", label: "Dashboard", href: "/dashboard/departments/hr/dashboard" },
+      { icon: "FileText", label: "Documents", href: "/dashboard/departments/hr/documents" },
       { icon: "Archive", label: "Archive / History", href: "/dashboard/departments/hr/archive" },
       { icon: "BookOpen", label: "Guidelines", href: "/dashboard/departments/hr/guidelines" },
     ],
     LEGAL_AND_COMPLIANCE: [
-      { icon: "FileText", label: "Documents", href: "/dashboard/departments/legal/documents" },
       { icon: "LayoutDashboard", label: "Dashboard", href: "/dashboard/departments/legal/dashboard" },
+      { icon: "FileText", label: "Documents", href: "/dashboard/departments/legal/documents" },
       { icon: "Archive", label: "Archive / History", href: "/dashboard/departments/legal/archive" },
       { icon: "BookOpen", label: "Guidelines", href: "/dashboard/departments/legal/guidelines" },
     ],
     ICT_AND_DIGITAL_TRANSFORMATION: [
-      { icon: "FileText", label: "Documents", href: "/dashboard/departments/ict/documents" },
       { icon: "LayoutDashboard", label: "Dashboard", href: "/dashboard/departments/ict/dashboard" },
+      { icon: "FileText", label: "Documents", href: "/dashboard/departments/ict/documents" },
       { icon: "Archive", label: "Archive / History", href: "/dashboard/departments/ict/archive" },
       { icon: "BookOpen", label: "Guidelines", href: "/dashboard/departments/ict/guidelines" },
     ],
     PROCUREMENT: [
-      { icon: "FileText", label: "Documents", href: "/dashboard/departments/procurement/documents" },
       { icon: "LayoutDashboard", label: "Dashboard", href: "/dashboard/departments/procurement/dashboard" },
+      { icon: "FileText", label: "Documents", href: "/dashboard/departments/procurement/documents" },
       { icon: "Archive", label: "Archive / History", href: "/dashboard/departments/procurement/archive" },
       { icon: "BookOpen", label: "Guidelines", href: "/dashboard/departments/procurement/guidelines" },
     ],
     PROPERTIES_MANAGEMENT: [
-      { icon: "FileText", label: "Documents", href: "/dashboard/departments/properties/documents" },
       { icon: "LayoutDashboard", label: "Dashboard", href: "/dashboard/departments/properties/dashboard" },
+      { icon: "FileText", label: "Documents", href: "/dashboard/departments/properties/documents" },
       { icon: "Archive", label: "Archive / History", href: "/dashboard/departments/properties/archive" },
       { icon: "BookOpen", label: "Guidelines", href: "/dashboard/departments/properties/guidelines" },
     ],
     PUBLIC_RELATIONS: [
-      { icon: "FileText", label: "Documents", href: "/dashboard/departments/public-relations/documents" },
       { icon: "LayoutDashboard", label: "Dashboard", href: "/dashboard/departments/public-relations/dashboard" },
+      { icon: "FileText", label: "Documents", href: "/dashboard/departments/public-relations/documents" },
       { icon: "Archive", label: "Archive / History", href: "/dashboard/departments/public-relations/archive" },
       { icon: "BookOpen", label: "Guidelines", href: "/dashboard/departments/public-relations/guidelines" },
     ],
     AUDIT: [
-      { icon: "FileText", label: "Documents", href: "/dashboard/departments/audit/documents" },
       { icon: "LayoutDashboard", label: "Dashboard", href: "/dashboard/departments/audit/dashboard" },
+      { icon: "FileText", label: "Documents", href: "/dashboard/departments/audit/documents" },
       { icon: "Archive", label: "Archive / History", href: "/dashboard/departments/audit/archive" },
       { icon: "BookOpen", label: "Guidelines", href: "/dashboard/departments/audit/guidelines" },
     ],
     AGRONOMY: [
-      { icon: "FileText", label: "Documents", href: "/dashboard/departments/agronomy/documents" },
       { icon: "LayoutDashboard", label: "Dashboard", href: "/dashboard/departments/agronomy/dashboard" },
+      { icon: "FileText", label: "Documents", href: "/dashboard/departments/agronomy/documents" },
       { icon: "Archive", label: "Archive / History", href: "/dashboard/departments/agronomy/archive" },
       { icon: "BookOpen", label: "Guidelines", href: "/dashboard/departments/agronomy/guidelines" },
+    ],
+    OPERATIONS: [
+      { icon: "LayoutDashboard", label: "Dashboard", href: "/dashboard/departments/factory" },
+      { icon: "FileText", label: "Documents", href: "/dashboard/departments/factory/documents" },
+      { icon: "Archive", label: "Archive / History", href: "/dashboard/departments/factory/archive" },
+      { icon: "BookOpen", label: "Guidelines", href: "/dashboard/departments/factory/guidelines" },
     ],
   }
 

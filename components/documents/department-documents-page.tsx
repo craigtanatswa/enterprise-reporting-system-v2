@@ -61,7 +61,7 @@ export async function DepartmentDocumentsPage({
             </Link>
           </Button>
           <Button asChild>
-            <Link href={`${basePath}/documents/upload`}>
+            <Link href={`/dashboard/documents/upload?returnTo=${encodeURIComponent(`${basePath}/documents`)}`}>
               <Upload className="mr-2 h-4 w-4" />
               Upload New Report
             </Link>
@@ -88,7 +88,7 @@ export async function DepartmentDocumentsPage({
                 Upload your first report to get started with document tracking.
               </p>
               <Button asChild>
-                <Link href={`${basePath}/documents/upload`}>
+                <Link href={`/dashboard/documents/upload?returnTo=${encodeURIComponent(`${basePath}/documents`)}`}>
                   <Upload className="mr-2 h-4 w-4" />
                   Upload New Report
                 </Link>
@@ -138,14 +138,14 @@ export async function DepartmentDocumentsPage({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem asChild>
-                            <Link href={`${basePath}/documents/${doc.id}`}>
+                            <Link href={`/dashboard/documents/${doc.id}?returnTo=${encodeURIComponent(`${basePath}/documents`)}`}>
                               <Eye className="mr-2 h-4 w-4" />
                               View Details
                             </Link>
                           </DropdownMenuItem>
                           {doc.status === "returned_with_comments" && (
                             <DropdownMenuItem asChild>
-                              <Link href={`${basePath}/documents/${doc.id}/new-version`}>
+                              <Link href={`/dashboard/documents/${doc.id}/new-version?returnTo=${encodeURIComponent(`${basePath}/documents`)}`}>
                                 <Upload className="mr-2 h-4 w-4" />
                                 Create New Version
                               </Link>

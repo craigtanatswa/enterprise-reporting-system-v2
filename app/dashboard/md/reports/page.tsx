@@ -9,13 +9,14 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Download, Eye, Search, FileText, Filter, RefreshCw } from "lucide-react"
+import { Download, Eye, Search, FileText, Filter, RefreshCw, MessageSquare } from "lucide-react"
 import { format } from "date-fns"
 import Link from "next/link"
 import { getDepartmentLabel } from "@/lib/utils/permissions"
 import { DOCUMENT_STATUSES } from "@/lib/utils/dashboard-routing"
 import { useSearchParams } from "next/navigation"
 import Loading from "./loading"
+import { MDReviewButton } from "@/components/documents/md-review-button"
 
 interface Document {
   id: string
@@ -145,11 +146,20 @@ export default function MDSubmittedReportsPage() {
               <TableCell>{getStatusBadge(doc.status)}</TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-2">
-                  <Button variant="ghost" size="icon" asChild>
-                    <Link href={`/dashboard/md/reports/${doc.id}`}>
+                  <Button variant="ghost" size="icon" asChild title="View">
+                    <Link href={`/dashboard/documents/${doc.id}?from=md`}>
                       <Eye className="h-4 w-4" />
                     </Link>
                   </Button>
+                  <Button variant="ghost" size="sm" asChild title="Comment">
+                    <Link href={`/dashboard/documents/${doc.id}?from=md#comments`}>
+                      <MessageSquare className="h-4 w-4 mr-1" />
+                      Comment
+                    </Link>
+                  </Button>
+                  {doc.status === "submitted" && (
+                    <MDReviewButton documentId={doc.id} onSuccess={fetchDocuments} />
+                  )}
                   {doc.file_url && (
                     <Button variant="ghost" size="icon" asChild>
                       <a href={doc.file_url} download={doc.file_name}>
