@@ -2,7 +2,6 @@
 
 import type React from "react"
 
-import { supabase } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -15,7 +14,8 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { Info, ArrowLeft, UserPlus, CheckCircle2, Crown } from "lucide-react"
-import { canAssignSingleHolderRole } from "@/lib/actions/user-management"
+import { canAssignSingleHolderRole, createUserAsAdmin } from "@/lib/actions/user-management"
+import type { UserRole, Department, SubDepartment } from "@/lib/utils/permissions"
 
 const ROLE_OPTIONS = [
   { value: "STAFF", label: "Staff" },
@@ -138,39 +138,23 @@ export default function AdminAddUserPage() {
     }
 
     try {
-      const { data, error: signUpError } = await supabase.auth.admin.createUser({
+      const result = await createUserAsAdmin({
         email: formData.email,
         password: formData.password,
-        email_confirm: false,
-        user_metadata: {
-          full_name: formData.fullName,
-          role: formData.role,
-          department: formData.department,
-          sub_department: formData.subDepartment || null,
-          phone: formData.phone,
-        },
+        fullName: formData.fullName,
+        phone: formData.phone || null,
+        role: formData.role as UserRole,
+        department: formData.department as Department,
+        subDepartment: (formData.subDepartment || null) as SubDepartment | null,
       })
 
-      if (signUpError) throw signUpError
-
-      if (data.user) {
-        const { error: profileError } = await supabase.from("profiles").upsert({
-          id: data.user.id,
-          full_name: formData.fullName,
-          email: formData.email,
-          phone: formData.phone || null,
-          role: formData.role,
-          department: formData.department,
-          sub_department: formData.subDepartment || null,
-          is_approved: true,
-          created_at: new Date().toISOString(),
-        })
-
-        if (profileError) throw profileError
+      if (!result.success) {
+        setError(result.error ?? "Failed to create user")
+        return
       }
 
       setSuccess(
-        `Account created for ${formData.fullName}${isMDRole ? " (Managing Director)" : ""}. A verification email has been sent to ${formData.email}. The account is pre-approved and will be active once the user confirms their email.`,
+        `Account created for ${formData.fullName}${isMDRole ? " (Managing Director)" : ""}. They can sign in now with this email and the temporary password you set — no confirmation email is required.`,
       )
 
       setFormData({
@@ -224,13 +208,14 @@ export default function AdminAddUserPage() {
             <li className="flex items-start gap-2">
               <CheckCircle2 className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
               <span>
-                A <strong>verification email</strong> is sent to confirm the address is real and reachable.
+                The email address is <strong>marked verified</strong> at creation — the user signs in with email and the
+                temporary password you provide (no confirmation link).
               </span>
             </li>
             <li className="flex items-start gap-2">
               <CheckCircle2 className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
               <span>
-                The user can sign in immediately after clicking the verification link.
+                Share the temporary password securely; they can change it after signing in.
               </span>
             </li>
           </ul>

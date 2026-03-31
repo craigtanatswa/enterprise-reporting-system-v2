@@ -8,12 +8,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Suspense, useState } from "react"
 import Image from "next/image"
-import { Shield, User } from "lucide-react"
+import { CheckCircle2, Shield, User } from "lucide-react"
 import { getDepartmentDashboardUrl } from "@/lib/utils/dashboard-routing"
+
+function PasswordResetNotice() {
+  const searchParams = useSearchParams()
+  if (searchParams.get("reset") !== "success") return null
+  return (
+    <Alert className="border-green-500/30 bg-green-500/10 text-green-800 dark:text-green-400">
+      <CheckCircle2 className="h-4 w-4" />
+      <AlertDescription>Your password was updated. Sign in with your new password.</AlertDescription>
+    </Alert>
+  )
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -99,7 +111,10 @@ export default function LoginPage() {
               <CardTitle className="text-2xl">Sign In</CardTitle>
               <CardDescription>Choose your sign-in type and enter your credentials</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              <Suspense fallback={null}>
+                <PasswordResetNotice />
+              </Suspense>
               <Tabs
                 value={loginType}
                 onValueChange={(value) => setLoginType(value as "user" | "admin")}

@@ -159,7 +159,9 @@ export function UserManagementTable({ users, currentUserId, currentUserRole }: U
     if (result.success) {
       toast({
         title: "User Deleted",
-        description: "User account has been permanently deleted.",
+        description:
+          result.warning ??
+          "User account has been permanently removed from authentication and the directory.",
       })
       router.refresh()
     } else {
