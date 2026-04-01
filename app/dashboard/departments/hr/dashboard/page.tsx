@@ -1,10 +1,11 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import { MinimalDepartmentDashboard } from "@/components/documents/minimal-department-dashboard"
 
-export default async function HRDashboardPage() {
+export default async function HrDashboardPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
   if (!user) {
     redirect("/auth/login")
@@ -16,11 +17,5 @@ export default async function HRDashboardPage() {
     redirect("/dashboard")
   }
 
-  return (
-    <MinimalDepartmentDashboard
-      department="HUMAN_RESOURCES_AND_ADMINISTRATION"
-      departmentLabel="Human Resources"
-      basePath="/dashboard/departments/hr"
-    />
-  )
+  redirect("/dashboard/kpi")
 }

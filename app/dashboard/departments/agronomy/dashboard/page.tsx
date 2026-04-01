@@ -1,10 +1,11 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import { MinimalDepartmentDashboard } from "@/components/documents/minimal-department-dashboard"
 
 export default async function AgronomyDashboardPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
   if (!user) {
     redirect("/auth/login")
@@ -16,11 +17,5 @@ export default async function AgronomyDashboardPage() {
     redirect("/dashboard")
   }
 
-  return (
-    <MinimalDepartmentDashboard
-      department="OPERATIONS"
-      departmentLabel="Agronomy"
-      basePath="/dashboard/departments/agronomy"
-    />
-  )
+  redirect("/dashboard/kpi")
 }

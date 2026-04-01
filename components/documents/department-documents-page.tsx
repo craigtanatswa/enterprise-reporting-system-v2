@@ -11,6 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { DocumentMetricsSummary } from "@/components/documents/document-metrics-summary"
 
 interface DepartmentDocumentsPageProps {
   department: string
@@ -68,6 +69,12 @@ export async function DepartmentDocumentsPage({
           </Button>
         </div>
       </div>
+
+      <DocumentMetricsSummary
+        department={department}
+        departmentLabel={departmentLabel}
+        basePath={basePath}
+      />
 
       {/* Main Document Table */}
       <Card>

@@ -14,7 +14,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
         <DashboardSidebar />
         <div className="flex flex-1 flex-col">
           <DashboardHeader />
-          <main className="flex-1 p-6">{children}</main>
+          <main className="flex-1 overflow-auto bg-muted/30 p-6">{children}</main>
         </div>
       </div>
     </SidebarProvider>

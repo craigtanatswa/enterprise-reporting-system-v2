@@ -1,7 +1,16 @@
-import { DashboardShell } from "@/components/dashboard/dashboard-shell"
+import { DashboardKpiRoot } from "@/components/dashboard/dashboard-kpi-root"
 import { createClient } from "@/lib/supabase/server"
+import { loadKpiDashboardState } from "@/lib/kpi-dashboard/merge-server"
+import {
+  canUpdateDepartmentKpi,
+  canViewAllKpiSegments,
+  getKpiSegmentForProfile,
+} from "@/lib/kpi-dashboard/segment-map"
 import { redirect } from "next/navigation"
 import type React from "react"
+import type { Department, SubDepartment } from "@/lib/utils/permissions"
+import type { UserRole } from "@/lib/utils/permissions"
+import { isManagingDirector } from "@/lib/utils/permissions"
 
 export default async function DashboardLayout({
   children,
@@ -18,21 +27,36 @@ export default async function DashboardLayout({
     redirect("/auth/login")
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("is_active")
-    .eq("id", user.id)
-    .single()
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
 
   if (!profile) {
     await supabase.auth.signOut()
     redirect("/auth/login")
   }
 
-  // 🚫 HARD GATE — approval is mandatory
   if (!profile.is_active) {
     redirect("/auth/verify-email?error=pending-approval")
   }
 
-  return <DashboardShell>{children}</DashboardShell>
+  const role = profile.role as UserRole
+  const dept = profile.department as Department
+  const sub = profile.sub_department as SubDepartment | null
+  const segment = getKpiSegmentForProfile(dept, sub)
+  const kpiEnabled = segment !== null || canViewAllKpiSegments(role)
+
+  const kpiState = kpiEnabled ? await loadKpiDashboardState(supabase) : null
+
+  return (
+    <DashboardKpiRoot
+      kpiEnabled={kpiEnabled}
+      departments={kpiState?.departments ?? []}
+      mdComments={kpiState?.mdComments ?? []}
+      hasFullKpiAccess={canViewAllKpiSegments(role)}
+      viewerIsMd={isManagingDirector(role)}
+      primarySegment={segment}
+      canEditDepartmentMetrics={canUpdateDepartmentKpi(role)}
+    >
+      {children}
+    </DashboardKpiRoot>
+  )
 }

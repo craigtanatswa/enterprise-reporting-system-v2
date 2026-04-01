@@ -1,6 +1,7 @@
 "use client"
 
 import { SidebarTrigger } from "@/components/ui/sidebar"
+import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import Link from "next/link"
@@ -27,14 +28,20 @@ export function DashboardHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <SidebarTrigger />
-      <Link href="/dashboard" className="flex items-center shrink-0">
-        <div className="relative h-12 w-18">
+    <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <SidebarTrigger className="-ml-0.5" />
+      <Separator orientation="vertical" className="mr-1 h-4" />
+      <div className="flex min-w-0 items-center gap-2">
+        <span className="truncate font-semibold text-foreground">ARDA Seeds</span>
+        <span className="text-muted-foreground">|</span>
+        <span className="truncate text-sm text-muted-foreground">Reporting System</span>
+      </div>
+      <Link href="/dashboard" className="ml-2 flex shrink-0 items-center md:ml-4">
+        <div className="relative h-9 w-14">
           <Image src="/arda-logo.png" alt="ARDA Seeds" fill className="object-contain" />
         </div>
       </Link>
-      <div className="flex flex-1 items-center justify-end gap-4">
+      <div className="flex flex-1 items-center justify-end gap-2 md:gap-4">
         <Button variant="ghost" size="icon" className="relative" asChild>
           <Link href="/dashboard/notifications">
             <Bell className="h-5 w-5" />

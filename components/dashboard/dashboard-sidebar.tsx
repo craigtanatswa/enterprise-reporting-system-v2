@@ -40,7 +40,7 @@ import {
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import Image from "next/image"
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase/client"
 import type { UserRole, Department } from "@/lib/utils/permissions"
 import {
@@ -51,10 +51,12 @@ import {
   isCorporateServicesManager,
 } from "@/lib/utils/permissions"
 import { getDepartmentSpecificNavigation } from "@/lib/utils/dashboard-routing"
+import { KpiSidebarSection } from "@/components/dashboard/kpi-sidebar-section"
 
 const navigationItems = {
   md: [
     { icon: Eye, label: "Submitted Reports", href: "/dashboard/md/reports" },
+    { icon: LayoutDashboard, label: "Executive KPIs", href: "/dashboard/md/kpi" },
     { icon: Factory, label: "Factory Dashboard", href: "/dashboard/departments/factory" },
     { icon: Lock, label: "Confidential Reports", href: "/dashboard/md" },
   ],
@@ -232,6 +234,10 @@ export function DashboardSidebar() {
             </SidebarGroupContent>
           </SidebarGroup>
         )}
+
+        <Suspense fallback={null}>
+          <KpiSidebarSection />
+        </Suspense>
 
         {/* Balance Scorecard - Available to all staff and HODs */}
         <SidebarGroup>
