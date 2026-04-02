@@ -19,10 +19,11 @@ interface KpiDashboardContextType {
   mdComments: MDComment[]
   hasFullKpiAccess: boolean
   viewerIsMd: boolean
-  /** When true, Executive overview is only linked from Managing Director sidebar (not KPI dashboards group). */
-  hideExecutiveOverviewInKpiNav: boolean
   primarySegment: string | null
   canEditDepartmentMetrics: boolean
+  viewerIsFactoryStaff: boolean
+  /** Confidential / MD-style access to factory data without being factory staff (read-only in merged manufacturing view). */
+  viewerFactoryObserverMode: boolean
   scorecard: ReturnType<typeof getDepartmentScorecard>
   refresh: () => void
   getUnreadCountByDepartment: (departmentId: string) => number
@@ -39,9 +40,10 @@ export function KpiDashboardProvider({
   mdComments: initialMdComments,
   hasFullKpiAccess,
   viewerIsMd,
-  hideExecutiveOverviewInKpiNav,
   primarySegment,
   canEditDepartmentMetrics,
+  viewerIsFactoryStaff,
+  viewerFactoryObserverMode,
 }: {
   children: React.ReactNode
   kpiEnabled: boolean
@@ -49,9 +51,10 @@ export function KpiDashboardProvider({
   mdComments: MDComment[]
   hasFullKpiAccess: boolean
   viewerIsMd: boolean
-  hideExecutiveOverviewInKpiNav: boolean
   primarySegment: string | null
   canEditDepartmentMetrics: boolean
+  viewerIsFactoryStaff: boolean
+  viewerFactoryObserverMode: boolean
 }) {
   const router = useRouter()
   const [departments, setDepartments] = useState(initialDepartments)
@@ -128,9 +131,10 @@ export function KpiDashboardProvider({
       mdComments,
       hasFullKpiAccess,
       viewerIsMd,
-      hideExecutiveOverviewInKpiNav,
       primarySegment,
       canEditDepartmentMetrics,
+      viewerIsFactoryStaff,
+      viewerFactoryObserverMode,
       scorecard,
       refresh,
       getUnreadCountByDepartment,
@@ -146,9 +150,10 @@ export function KpiDashboardProvider({
       mdComments,
       hasFullKpiAccess,
       viewerIsMd,
-      hideExecutiveOverviewInKpiNav,
       primarySegment,
       canEditDepartmentMetrics,
+      viewerIsFactoryStaff,
+      viewerFactoryObserverMode,
       scorecard,
       refresh,
       getUnreadCountByDepartment,

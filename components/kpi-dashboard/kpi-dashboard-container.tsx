@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import { useSearchParams } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 import { KpiExecutiveDashboard } from "@/components/kpi-dashboard/kpi-executive-dashboard"
 import { KpiDepartmentDashboard } from "@/components/kpi-dashboard/kpi-department-dashboard"
 import { useKpiDashboard } from "@/components/kpi-dashboard/kpi-dashboard-provider"
@@ -9,14 +9,24 @@ import { useKpiDashboard } from "@/components/kpi-dashboard/kpi-dashboard-provid
 export function KpiDashboardContainer() {
   const { selectedDepartment, setSelectedDepartment, getDepartment, hasFullKpiAccess, primarySegment } =
     useKpiDashboard()
+  const pathname = usePathname()
   const searchParams = useSearchParams()
 
   useEffect(() => {
     const d = searchParams.get("dept")
     if (d && getDepartment(d)) {
       setSelectedDepartment(d)
+      return
     }
-  }, [searchParams, getDepartment, setSelectedDepartment])
+    // MD executive route without ?dept= must show full executive overview (avoid stale manufacturing selection).
+    if (pathname.startsWith("/dashboard/md/kpi")) {
+      setSelectedDepartment("executive")
+      return
+    }
+    if (pathname === "/dashboard/kpi" && hasFullKpiAccess) {
+      setSelectedDepartment("executive")
+    }
+  }, [pathname, searchParams, getDepartment, setSelectedDepartment, hasFullKpiAccess])
 
   if (selectedDepartment === "executive") {
     if (hasFullKpiAccess) {

@@ -46,6 +46,9 @@ export default async function DashboardLayout({
 
   const kpiState = kpiEnabled ? await loadKpiDashboardState(supabase) : null
 
+  const viewerIsFactoryStaff = dept === "OPERATIONS" && sub === "FACTORY"
+  const viewerFactoryObserverMode = canViewConfidentialReports(role) && !viewerIsFactoryStaff
+
   return (
     <DashboardKpiRoot
       kpiEnabled={kpiEnabled}
@@ -53,9 +56,10 @@ export default async function DashboardLayout({
       mdComments={kpiState?.mdComments ?? []}
       hasFullKpiAccess={canViewAllKpiSegments(role)}
       viewerIsMd={isManagingDirector(role)}
-      hideExecutiveOverviewInKpiNav={canViewConfidentialReports(role)}
       primarySegment={segment}
       canEditDepartmentMetrics={canUpdateDepartmentKpi(role)}
+      viewerIsFactoryStaff={viewerIsFactoryStaff}
+      viewerFactoryObserverMode={viewerFactoryObserverMode}
     >
       {children}
     </DashboardKpiRoot>

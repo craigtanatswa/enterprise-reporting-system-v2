@@ -12,9 +12,10 @@ export function DashboardKpiRoot({
   mdComments,
   hasFullKpiAccess,
   viewerIsMd,
-  hideExecutiveOverviewInKpiNav,
   primarySegment,
   canEditDepartmentMetrics,
+  viewerIsFactoryStaff,
+  viewerFactoryObserverMode,
 }: {
   children: React.ReactNode
   kpiEnabled: boolean
@@ -22,9 +23,10 @@ export function DashboardKpiRoot({
   mdComments: MDComment[]
   hasFullKpiAccess: boolean
   viewerIsMd: boolean
-  hideExecutiveOverviewInKpiNav: boolean
   primarySegment: string | null
   canEditDepartmentMetrics: boolean
+  viewerIsFactoryStaff: boolean
+  viewerFactoryObserverMode: boolean
 }) {
   return (
     <KpiDashboardProvider
@@ -33,9 +35,10 @@ export function DashboardKpiRoot({
       mdComments={mdComments}
       hasFullKpiAccess={hasFullKpiAccess}
       viewerIsMd={viewerIsMd}
-      hideExecutiveOverviewInKpiNav={hideExecutiveOverviewInKpiNav}
       primarySegment={primarySegment}
       canEditDepartmentMetrics={canEditDepartmentMetrics}
+      viewerIsFactoryStaff={viewerIsFactoryStaff}
+      viewerFactoryObserverMode={viewerFactoryObserverMode}
     >
       <DashboardShell>{children}</DashboardShell>
     </KpiDashboardProvider>

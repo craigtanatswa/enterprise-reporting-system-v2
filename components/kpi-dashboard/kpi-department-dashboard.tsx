@@ -6,10 +6,13 @@ import { KpiMetricCard } from "@/components/kpi-dashboard/metric-card"
 import { Button } from "@/components/ui/button"
 import { useKpiDashboard } from "@/components/kpi-dashboard/kpi-dashboard-provider"
 import type { DepartmentData } from "@/lib/kpi-dashboard/types"
+import { FactoryOperationalSection } from "@/components/factory/factory-operational-section"
 
 export function KpiDepartmentDashboard({ department }: { department: DepartmentData }) {
   const router = useRouter()
-  const { canEditDepartmentMetrics } = useKpiDashboard()
+  const { canEditDepartmentMetrics, viewerIsFactoryStaff, viewerFactoryObserverMode } = useKpiDashboard()
+
+  const isManufacturing = department.id === "operations-manufacturing"
 
   return (
     <div className="space-y-6">
@@ -35,6 +38,13 @@ export function KpiDepartmentDashboard({ department }: { department: DepartmentD
           />
         ))}
       </div>
+
+      {isManufacturing && (
+        <FactoryOperationalSection
+          showFactoryStaffUi={viewerIsFactoryStaff}
+          observerMode={viewerFactoryObserverMode}
+        />
+      )}
     </div>
   )
 }
