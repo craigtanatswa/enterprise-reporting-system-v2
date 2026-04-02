@@ -19,6 +19,8 @@ interface KpiDashboardContextType {
   mdComments: MDComment[]
   hasFullKpiAccess: boolean
   viewerIsMd: boolean
+  /** When true, Executive overview is only linked from Managing Director sidebar (not KPI dashboards group). */
+  hideExecutiveOverviewInKpiNav: boolean
   primarySegment: string | null
   canEditDepartmentMetrics: boolean
   scorecard: ReturnType<typeof getDepartmentScorecard>
@@ -37,6 +39,7 @@ export function KpiDashboardProvider({
   mdComments: initialMdComments,
   hasFullKpiAccess,
   viewerIsMd,
+  hideExecutiveOverviewInKpiNav,
   primarySegment,
   canEditDepartmentMetrics,
 }: {
@@ -46,6 +49,7 @@ export function KpiDashboardProvider({
   mdComments: MDComment[]
   hasFullKpiAccess: boolean
   viewerIsMd: boolean
+  hideExecutiveOverviewInKpiNav: boolean
   primarySegment: string | null
   canEditDepartmentMetrics: boolean
 }) {
@@ -124,6 +128,7 @@ export function KpiDashboardProvider({
       mdComments,
       hasFullKpiAccess,
       viewerIsMd,
+      hideExecutiveOverviewInKpiNav,
       primarySegment,
       canEditDepartmentMetrics,
       scorecard,
@@ -141,6 +146,7 @@ export function KpiDashboardProvider({
       mdComments,
       hasFullKpiAccess,
       viewerIsMd,
+      hideExecutiveOverviewInKpiNav,
       primarySegment,
       canEditDepartmentMetrics,
       scorecard,

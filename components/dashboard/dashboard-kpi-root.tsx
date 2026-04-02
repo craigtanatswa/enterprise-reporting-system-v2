@@ -12,6 +12,7 @@ export function DashboardKpiRoot({
   mdComments,
   hasFullKpiAccess,
   viewerIsMd,
+  hideExecutiveOverviewInKpiNav,
   primarySegment,
   canEditDepartmentMetrics,
 }: {
@@ -21,6 +22,7 @@ export function DashboardKpiRoot({
   mdComments: MDComment[]
   hasFullKpiAccess: boolean
   viewerIsMd: boolean
+  hideExecutiveOverviewInKpiNav: boolean
   primarySegment: string | null
   canEditDepartmentMetrics: boolean
 }) {
@@ -31,6 +33,7 @@ export function DashboardKpiRoot({
       mdComments={mdComments}
       hasFullKpiAccess={hasFullKpiAccess}
       viewerIsMd={viewerIsMd}
+      hideExecutiveOverviewInKpiNav={hideExecutiveOverviewInKpiNav}
       primarySegment={primarySegment}
       canEditDepartmentMetrics={canEditDepartmentMetrics}
     >

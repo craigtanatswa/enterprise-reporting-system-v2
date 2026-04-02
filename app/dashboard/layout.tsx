@@ -10,7 +10,7 @@ import { redirect } from "next/navigation"
 import type React from "react"
 import type { Department, SubDepartment } from "@/lib/utils/permissions"
 import type { UserRole } from "@/lib/utils/permissions"
-import { isManagingDirector } from "@/lib/utils/permissions"
+import { canViewConfidentialReports, isManagingDirector } from "@/lib/utils/permissions"
 
 export default async function DashboardLayout({
   children,
@@ -53,6 +53,7 @@ export default async function DashboardLayout({
       mdComments={kpiState?.mdComments ?? []}
       hasFullKpiAccess={canViewAllKpiSegments(role)}
       viewerIsMd={isManagingDirector(role)}
+      hideExecutiveOverviewInKpiNav={canViewConfidentialReports(role)}
       primarySegment={segment}
       canEditDepartmentMetrics={canUpdateDepartmentKpi(role)}
     >

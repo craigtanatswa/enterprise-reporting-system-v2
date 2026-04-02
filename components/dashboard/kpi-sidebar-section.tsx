@@ -61,6 +61,7 @@ export function KpiSidebarSection() {
   const {
     departments,
     hasFullKpiAccess,
+    hideExecutiveOverviewInKpiNav,
     primarySegment,
     getUnreadCountByDepartment,
     setSelectedDepartment,
@@ -81,17 +82,19 @@ export function KpiSidebarSection() {
           <SidebarGroupLabel>KPI dashboards</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname.startsWith("/dashboard/md/kpi") && !pathname.includes("md-comments")}
-                >
-                  <Link href="/dashboard/md/kpi" onClick={() => handleDeptNav("executive")}>
-                    <LayoutDashboard className="h-4 w-4" />
-                    <span>Executive overview</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {!hideExecutiveOverviewInKpiNav && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname.startsWith("/dashboard/md/kpi") && !pathname.includes("md-comments")}
+                  >
+                    <Link href="/dashboard/md/kpi" onClick={() => handleDeptNav("executive")}>
+                      <LayoutDashboard className="h-4 w-4" />
+                      <span>Executive overview</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
               {nonExecutive.map((dept) => {
                 const Icon = iconMap[dept.icon] || LayoutDashboard
                 const href = `/dashboard/kpi?dept=${encodeURIComponent(dept.id)}`

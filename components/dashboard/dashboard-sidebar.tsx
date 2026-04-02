@@ -55,7 +55,7 @@ import { KpiSidebarSection } from "@/components/dashboard/kpi-sidebar-section"
 
 const navigationItems = {
   md: [
-    { icon: LayoutDashboard, label: "Executive KPIs", href: "/dashboard/md/kpi" },
+    { icon: LayoutDashboard, label: "Executive Overview", href: "/dashboard/md/kpi" },
     { icon: Eye, label: "Submitted Reports", href: "/dashboard/md/reports" },
     { icon: Factory, label: "Factory Dashboard", href: "/dashboard/departments/factory" },
     { icon: Lock, label: "Confidential Reports", href: "/dashboard/md" },
