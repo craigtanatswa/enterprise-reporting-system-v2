@@ -37,9 +37,9 @@ export function getDepartmentDashboardUrl(
     return "/dashboard/csm"
   }
 
-  // Managing Director — default landing: Submitted Reports (aggregated across all departments)
+  // Managing Director — default landing: Executive Overview (MD KPI dashboard)
   if (department === "OFFICE_OF_THE_MANAGING_DIRECTOR") {
-    return "/dashboard/md/reports"
+    return "/dashboard/md/kpi"
   }
 
   // Factory is special - operational console first
@@ -75,8 +75,9 @@ export function getDepartmentDashboardUrl(
 }
 
 export function getDepartmentSpecificNavigation(department: Department | null, subdepartment?: string | null) {
-  // Managing Director — Submitted Reports is default/primary; MD Dashboard for confidential audit reports
+  // Managing Director — Executive Overview primary; Submitted Reports; MD Dashboard for confidential audit reports
   const mdNavigation = [
+    { icon: "LayoutDashboard", label: "Executive overview", href: "/dashboard/md/kpi" },
     { icon: "Eye", label: "Submitted Reports", href: "/dashboard/md/reports" },
     { icon: "Crown", label: "MD Dashboard", href: "/dashboard/md" },
     { icon: "CheckCircle2", label: "Acknowledgements", href: "/dashboard/md/acknowledgements" },

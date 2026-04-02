@@ -55,8 +55,8 @@ import { KpiSidebarSection } from "@/components/dashboard/kpi-sidebar-section"
 
 const navigationItems = {
   md: [
-    { icon: Eye, label: "Submitted Reports", href: "/dashboard/md/reports" },
     { icon: LayoutDashboard, label: "Executive KPIs", href: "/dashboard/md/kpi" },
+    { icon: Eye, label: "Submitted Reports", href: "/dashboard/md/reports" },
     { icon: Factory, label: "Factory Dashboard", href: "/dashboard/departments/factory" },
     { icon: Lock, label: "Confidential Reports", href: "/dashboard/md" },
   ],
@@ -130,15 +130,52 @@ export function DashboardSidebar() {
 
   return (
     <Sidebar>
-      <SidebarHeader className="border-b p-4">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="relative h-15 w-24">
-            <Image src="/arda-logo.png" alt="ARDA Seeds" fill className="object-contain" priority />
+      <SidebarHeader className="border-b border-sidebar-border p-4">
+        <Link
+          href="/dashboard"
+          className="flex w-full min-w-0 items-center gap-3"
+        >
+          <div className="relative size-24 shrink-0 overflow-hidden rounded-lg bg-white shadow-sm">
+            <Image
+              src="/arda-logo-green-panel.png"
+              alt="ARDA Seeds"
+              fill
+              className="object-contain rounded-lg"
+              priority
+            />
+          </div>
+          <div className="min-w-0 flex flex-col gap-0.5 leading-tight">
+            <span className="truncate font-semibold text-white">ARDA Seeds</span>
+            <span className="truncate text-sm text-white/90">Reporting System</span>
           </div>
         </Link>
       </SidebarHeader>
 
       <SidebarContent>
+        {shouldShowMD && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Managing Director</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {navigationItems.md.map((item) => {
+                  const Icon = item.icon
+                  const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton asChild isActive={isActive}>
+                        <Link href={item.href}>
+                          <Icon className="h-4 w-4" />
+                          <span>{item.label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
         {shouldShowAdmin && (
           <SidebarGroup>
             <SidebarGroupLabel>Administration</SidebarGroupLabel>
@@ -286,30 +323,6 @@ export function DashboardSidebar() {
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
-
-        {shouldShowMD && (
-          <SidebarGroup>
-            <SidebarGroupLabel>Managing Director</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {navigationItems.md.map((item) => {
-                  const Icon = item.icon
-                  const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
-                  return (
-                    <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton asChild isActive={isActive}>
-                        <Link href={item.href}>
-                          <Icon className="h-4 w-4" />
-                          <span>{item.label}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )
-                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
