@@ -69,6 +69,19 @@ const navigationItems = {
   csm: [{ icon: LayoutDashboard, label: "Dashboard", href: "/dashboard/csm" }],
 }
 
+function isMdSidebarItemActive(pathname: string, href: string): boolean {
+  if (href === "/dashboard/md") {
+    return pathname === "/dashboard/md"
+  }
+  if (href === "/dashboard/md/reports") {
+    return pathname === "/dashboard/md/reports" || pathname.startsWith("/dashboard/md/reports/")
+  }
+  if (href === "/dashboard/md/kpi") {
+    return pathname.startsWith("/dashboard/md/kpi")
+  }
+  return pathname === href || pathname.startsWith(`${href}/`)
+}
+
 export function DashboardSidebar() {
   const pathname = usePathname()
   const [userRole, setUserRole] = useState<UserRole | null>(null)
@@ -159,7 +172,7 @@ export function DashboardSidebar() {
               <SidebarMenu>
                 {navigationItems.md.map((item) => {
                   const Icon = item.icon
-                  const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+                  const isActive = isMdSidebarItemActive(pathname, item.href)
                   return (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton asChild isActive={isActive}>

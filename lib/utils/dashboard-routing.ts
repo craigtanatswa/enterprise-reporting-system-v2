@@ -75,11 +75,10 @@ export function getDepartmentDashboardUrl(
 }
 
 export function getDepartmentSpecificNavigation(department: Department | null, subdepartment?: string | null) {
-  // Managing Director — Executive Overview primary; Submitted Reports; MD Dashboard for confidential audit reports
+  // Managing Director — confidential reports live under Managing Director sidebar only (/dashboard/md)
   const mdNavigation = [
     { icon: "LayoutDashboard", label: "Executive overview", href: "/dashboard/md/kpi" },
     { icon: "Eye", label: "Submitted Reports", href: "/dashboard/md/reports" },
-    { icon: "Crown", label: "MD Dashboard", href: "/dashboard/md" },
     { icon: "CheckCircle2", label: "Acknowledgements", href: "/dashboard/md/acknowledgements" },
   ]
 

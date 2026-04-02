@@ -47,10 +47,10 @@ export default async function MDDashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Crown className="h-8 w-8 text-amber-500" />
-            Managing Director Dashboard
+            <Lock className="h-8 w-8 text-amber-600" />
+            Confidential Reports
           </h1>
-          <p className="text-muted-foreground">Confidential audit reports and oversight</p>
+          <p className="text-muted-foreground">Confidential audit reports, acknowledgements, and MD-only oversight</p>
         </div>
         <div className="flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5">
           <Lock className="h-3.5 w-3.5 text-amber-600" />
