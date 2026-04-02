@@ -75,12 +75,7 @@ export function getDepartmentDashboardUrl(
 }
 
 export function getDepartmentSpecificNavigation(department: Department | null, subdepartment?: string | null) {
-  // Managing Director — executive KPIs live under Managing Director sidebar only (/dashboard/md/kpi)
-  const mdNavigation = [
-    { icon: "Eye", label: "Submitted Reports", href: "/dashboard/md/reports" },
-    { icon: "CheckCircle2", label: "Acknowledgements", href: "/dashboard/md/acknowledgements" },
-  ]
-
+  // Managing Director — all links live under Managing Director sidebar (no duplicate Department group)
   // Factory: same order as all departments: Dashboard, Documents (primary), Archive, Guidelines
   const factoryNavigation = [
     { icon: "LayoutDashboard", label: "KPI Dashboard", href: "/dashboard/kpi" },
@@ -162,7 +157,7 @@ export function getDepartmentSpecificNavigation(department: Department | null, s
   }
 
   if (department === "OFFICE_OF_THE_MANAGING_DIRECTOR") {
-    return mdNavigation
+    return []
   }
   if (subdepartment === "FACTORY") {
     return factoryNavigation
