@@ -30,6 +30,7 @@ export default async function KpiMetricPage({
   const reportingYear = new Date().getFullYear()
   let salesRevenueByMonth: Record<number, number> | undefined
   let salesVolumeCells: Record<string, Record<number, number>> | undefined
+  let financeInventoryByVariety: Record<string, number> | undefined
 
   if (segment === "sales-marketing" && metricId === "sales-revenue") {
     const { data } = await supabase
@@ -57,6 +58,17 @@ export default async function KpiMetricPage({
     }
   }
 
+  if (segment === "finance" && metricId === "fin-inventory-levels") {
+    financeInventoryByVariety = {}
+    const { data } = await supabase
+      .from("kpi_finance_inventory_by_variety")
+      .select("variety_id, inventory_tonnes")
+      .eq("segment_id", segment)
+    for (const row of data ?? []) {
+      financeInventoryByVariety[row.variety_id as string] = Number(row.inventory_tonnes)
+    }
+  }
+
   return (
     <KpiMetricDetail
       segmentId={segment}
@@ -69,6 +81,7 @@ export default async function KpiMetricPage({
       }
       salesRevenueByMonth={salesRevenueByMonth}
       salesVolumeCells={salesVolumeCells}
+      financeInventoryByVariety={financeInventoryByVariety}
     />
   )
 }

@@ -15,6 +15,7 @@ import {
   addKpiDepartmentCommentAction,
   addKpiMdCommentAction,
 } from "@/app/actions/kpi-dashboard"
+import { KpiFinanceInventoryVarietyPanel } from "@/components/kpi-dashboard/kpi-finance-inventory-variety-panel"
 import { KpiSalesRevenueMonthlyPanel } from "@/components/kpi-dashboard/kpi-sales-revenue-monthly-panel"
 import { KpiSalesVolumeMonthlyPanel } from "@/components/kpi-dashboard/kpi-sales-volume-monthly-panel"
 
@@ -29,12 +30,14 @@ export function KpiMetricDetail({
   metricId,
   salesRevenueByMonth,
   salesVolumeCells,
+  financeInventoryByVariety,
   reportingYear,
 }: {
   segmentId: string
   metricId: string
   salesRevenueByMonth?: Record<number, number>
   salesVolumeCells?: Record<string, Record<number, number>>
+  financeInventoryByVariety?: Record<string, number>
   reportingYear?: number
 }) {
   const router = useRouter()
@@ -133,16 +136,29 @@ export function KpiMetricDetail({
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Current value</p>
-                  <p className="text-3xl font-bold text-foreground">
-                    {metric.value}
+                {metricId === "fin-inventory-levels" && segmentId === "finance" ? (
+                  <div className="col-span-2">
+                    <p className="text-sm text-muted-foreground">Largest inventory (by variety)</p>
+                    <p className="text-3xl font-bold text-foreground">{metric.value}</p>
                     {metric.unit && (
-                      <span className="ml-1 text-lg font-normal text-muted-foreground">{metric.unit}</span>
+                      <p className="mt-1 text-lg font-medium text-muted-foreground">{metric.unit}</p>
                     )}
-                  </p>
-                </div>
-                {metric.target != null && (
+                    {metric.details && (
+                      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{metric.details}</p>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Current value</p>
+                    <p className="text-3xl font-bold text-foreground">
+                      {metric.value}
+                      {metric.unit && (
+                        <span className="ml-1 text-lg font-normal text-muted-foreground">{metric.unit}</span>
+                      )}
+                    </p>
+                  </div>
+                )}
+                {!(metricId === "fin-inventory-levels" && segmentId === "finance") && metric.target != null && (
                   <div>
                     <p className="text-sm text-muted-foreground">Target</p>
                     <p className="text-3xl font-bold text-foreground">
@@ -163,7 +179,7 @@ export function KpiMetricDetail({
                   </p>
                 </div>
               )}
-              {metric.details && (
+              {metric.details && !(metricId === "fin-inventory-levels" && segmentId === "finance") && (
                 <div>
                   <p className="text-sm text-muted-foreground">Additional details</p>
                   <p className="text-foreground">{metric.details}</p>
@@ -193,6 +209,17 @@ export function KpiMetricDetail({
                 segmentId={segmentId}
                 year={reportingYear}
                 initialCells={salesVolumeCells}
+                canEdit={canEditDepartmentMetrics}
+                onSaved={refresh}
+              />
+            )}
+
+          {metricId === "fin-inventory-levels" &&
+            segmentId === "finance" &&
+            financeInventoryByVariety != null && (
+              <KpiFinanceInventoryVarietyPanel
+                segmentId={segmentId}
+                initialByVariety={financeInventoryByVariety}
                 canEdit={canEditDepartmentMetrics}
                 onSaved={refresh}
               />

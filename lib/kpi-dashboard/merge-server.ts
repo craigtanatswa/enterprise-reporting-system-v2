@@ -3,6 +3,10 @@ import { initialDepartments, initialMDComments, getDepartmentScorecard } from "@
 import { executiveMetricSourceDetail } from "@/lib/kpi-dashboard/executive-bindings"
 import type { Comment, DepartmentData, MDComment, MetricData, MetricStatus } from "@/lib/kpi-dashboard/types"
 import {
+  deriveFinanceInventoryLevelsFromDbRows,
+  type FinanceInventoryRow,
+} from "@/lib/kpi-dashboard/finance-inventory-metrics"
+import {
   deriveSalesRevenueYtd,
   deriveVolumeVarietyKpi,
   type RevenueMonthlyRow,
@@ -153,7 +157,8 @@ export async function loadKpiDashboardState(supabase: SupabaseClient): Promise<{
     const salesSeg = "sales-marketing"
     const now = new Date()
     const y = now.getFullYear()
-    const [revRes, volRes] = await Promise.all([
+    const financeSeg = "finance"
+    const [revRes, volRes, finInvRes] = await Promise.all([
       supabase
         .from("kpi_sales_revenue_monthly")
         .select("month,amount_usd,updated_at")
@@ -164,6 +169,10 @@ export async function loadKpiDashboardState(supabase: SupabaseClient): Promise<{
         .select("month,variety_id,volume_tonnes,updated_at")
         .eq("segment_id", salesSeg)
         .eq("year", y),
+      supabase
+        .from("kpi_finance_inventory_by_variety")
+        .select("variety_id,inventory_tonnes,updated_at")
+        .eq("segment_id", financeSeg),
     ])
     const sm = base.find((d) => d.id === salesSeg)
     if (sm && !revRes.error && revRes.data?.length) {
@@ -186,8 +195,22 @@ export async function loadKpiDashboardState(supabase: SupabaseClient): Promise<{
         m.unit = undefined
       }
     }
+
+    const finDept = base.find((d) => d.id === financeSeg)
+    const finInvData = finInvRes.data
+    const finInvErr = finInvRes.error
+    if (finDept && !finInvErr && finInvData != null && finInvData.length > 0) {
+      const derived = deriveFinanceInventoryLevelsFromDbRows(finInvData as FinanceInventoryRow[])
+      const m = finDept.metrics.find((x) => x.id === "fin-inventory-levels")
+      if (derived && m) {
+        m.value = derived.value
+        m.unit = derived.unit
+        m.details = derived.details
+        m.lastUpdated = derived.lastUpdated
+      }
+    }
   } catch {
-    // Tables may not exist until migration 021 is applied.
+    // Tables may not exist until migrations 021 / 022 are applied.
   }
 
   syncExecutiveFromDepartmentMetrics(base)

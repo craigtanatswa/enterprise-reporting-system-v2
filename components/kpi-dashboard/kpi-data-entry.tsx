@@ -82,7 +82,9 @@ export function KpiDataEntry({ segmentId }: { segmentId: string }) {
   }
 
   const usesMonthlyBreakdown = (id: string) =>
-    id === "sales-revenue" || id === "sales-volume-variety"
+    id === "sales-revenue" ||
+    id === "sales-volume-variety" ||
+    id === "fin-inventory-levels"
 
   const saveMetric = async (metricId: string) => {
     const metric = department.metrics.find((m) => m.id === metricId)
@@ -182,7 +184,9 @@ export function KpiDataEntry({ segmentId }: { segmentId: string }) {
                         >
                           Open the metric page
                         </Link>{" "}
-                        to enter month-by-month figures. The headline value is calculated from those entries.
+                        {metric.id === "fin-inventory-levels"
+                          ? "to enter inventory by variety. The headline shows the largest holding; ranks 2–4 are derived from the table."
+                          : "to enter month-by-month figures. The headline value is calculated from those entries."}
                       </CardDescription>
                     )}
                   </div>

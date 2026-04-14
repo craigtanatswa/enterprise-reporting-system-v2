@@ -545,8 +545,10 @@ export const initialDepartments: DepartmentData[] = [
       {
         id: "fin-inventory-levels",
         name: "Inventory Levels",
-        value: 2800,
-        unit: "tonnes",
+        value: "ZS269",
+        unit: "850 tonnes",
+        details:
+          "2nd: OPV maize ZM521 (720 t) · 3rd: Msasa (580 t) · 4th: SORGHUM Macia (390 t)",
         status: "green",
         trend: "stable",
         comments: [],
