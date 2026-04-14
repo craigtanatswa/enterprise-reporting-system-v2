@@ -1,9 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { TableExportMenu } from "@/components/ui/table-export-menu"
 import {
   Table,
   TableBody,
@@ -42,6 +43,22 @@ export function KpiFinanceInventoryVarietyPanel({
   useEffect(() => {
     setValues(buildValues(initialByVariety))
   }, [initialByVariety])
+
+  const inventoryExport = useMemo(() => {
+    const headers = ["Category", "Variety", "Inventory (tonnes)"]
+    const rows = SALES_PRODUCT_VARIETIES.map((v) => {
+      let tonnes: number
+      if (canEdit) {
+        const raw = values[v.id]?.trim() ?? ""
+        const n = raw === "" ? 0 : parseFloat(raw)
+        tonnes = Number.isNaN(n) ? 0 : n
+      } else {
+        tonnes = initialByVariety[v.id] ?? 0
+      }
+      return [v.category, v.label, tonnes]
+    })
+    return { headers, rows }
+  }, [values, initialByVariety, canEdit])
 
   const saveAllChanged = async () => {
     setMessage(null)
@@ -86,11 +103,20 @@ export function KpiFinanceInventoryVarietyPanel({
               it. Save to update the dashboard.
             </CardDescription>
           </div>
-          {canEdit && (
-            <Button type="button" variant="secondary" disabled={bulkPending} onClick={saveAllChanged} className="shrink-0">
-              {bulkPending ? "Saving…" : "Save all changes"}
-            </Button>
-          )}
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <TableExportMenu
+              fileBaseName="finance-inventory-by-variety"
+              sheetName="Finance inventory"
+              title="Inventory by variety (Finance)"
+              headers={inventoryExport.headers}
+              rows={inventoryExport.rows}
+            />
+            {canEdit && (
+              <Button type="button" variant="secondary" disabled={bulkPending} onClick={saveAllChanged}>
+                {bulkPending ? "Saving…" : "Save all changes"}
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
