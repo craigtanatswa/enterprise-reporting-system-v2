@@ -12,6 +12,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { DocumentMetricsSummary } from "@/components/documents/document-metrics-summary"
+import { TableExportMenu } from "@/components/ui/table-export-menu"
+import { documentStatusExportLabel } from "@/lib/utils/documents-table-export"
 
 interface DepartmentDocumentsPageProps {
   department: string
@@ -78,11 +80,40 @@ export async function DepartmentDocumentsPage({
 
       {/* Main Document Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>Document Repository</CardTitle>
-          <CardDescription>
-            {documents?.length || 0} document(s) in this department
-          </CardDescription>
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
+          <div className="space-y-1.5">
+            <CardTitle>Document Repository</CardTitle>
+            <CardDescription>
+              {documents?.length || 0} document(s) in this department
+            </CardDescription>
+          </div>
+          {documents && documents.length > 0 && (
+            <TableExportMenu
+              fileBaseName={`${department}-documents`}
+              sheetName="Documents"
+              title={`${departmentLabel} documents`}
+              headers={[
+                "Report title",
+                "File name",
+                "Reporting period",
+                "Category",
+                "Status",
+                "Last action date",
+                "Current reviewer",
+              ]}
+              rows={documents.map((doc) => [
+                doc.title,
+                doc.file_name,
+                doc.reporting_period || "",
+                (doc.category || "other").replace(/_/g, " "),
+                documentStatusExportLabel(doc.status),
+                new Date(doc.updated_at || doc.created_at).toLocaleDateString(),
+                doc.reviewed_by?.full_name ||
+                  (doc.status === "submitted" ? "Pending HOD Review" : "-"),
+              ])}
+              className="shrink-0"
+            />
+          )}
         </CardHeader>
         <CardContent>
           {!documents || documents.length === 0 ? (

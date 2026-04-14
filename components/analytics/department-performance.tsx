@@ -1,9 +1,11 @@
 "use client"
 
+import { useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import { TableExportMenu } from "@/components/ui/table-export-menu"
 
 interface DepartmentData {
   department: string
@@ -15,11 +17,39 @@ interface DepartmentData {
 }
 
 export function DepartmentPerformance({ data }: { data: DepartmentData[] }) {
+  const exportData = useMemo(() => {
+    const headers = ["Department", "Production", "Dispatch", "Processing", "Efficiency %", "Users"]
+    const rows = data.map((dept) => {
+      const efficiency = Number(dept.avg_efficiency) || 0
+      return [
+        dept.department,
+        dept.production_reports_count,
+        dept.dispatch_reports_count,
+        dept.processing_reports_count,
+        `${efficiency.toFixed(0)}%`,
+        dept.active_users,
+      ]
+    })
+    return { headers, rows }
+  }, [data])
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Department Performance</CardTitle>
-        <CardDescription>Operational metrics across all departments</CardDescription>
+      <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
+        <div className="space-y-1.5">
+          <CardTitle>Department Performance</CardTitle>
+          <CardDescription>Operational metrics across all departments</CardDescription>
+        </div>
+        {data.length > 0 && (
+          <TableExportMenu
+            fileBaseName="department-performance"
+            sheetName="Performance"
+            title="Department performance"
+            headers={exportData.headers}
+            rows={exportData.rows}
+            className="shrink-0"
+          />
+        )}
       </CardHeader>
       <CardContent>
         <Table>

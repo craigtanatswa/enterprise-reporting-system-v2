@@ -1,5 +1,6 @@
 "use client"
 
+import { useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
@@ -14,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { FileText, MoreVertical, Download, Eye, Edit, Archive, Trash2 } from "lucide-react"
 import Link from "next/link"
+import { TableExportMenu } from "@/components/ui/table-export-menu"
 
 interface Document {
   id: string
@@ -67,6 +69,20 @@ export function DocumentsTable({ documents }: { documents: Document[] }) {
     return colors[category] || colors.other
   }
 
+  const exportData = useMemo(() => {
+    const headers = ["Document", "File", "Category", "Status", "Version", "Uploaded by", "Date"]
+    const rows = documents.map((doc) => [
+      doc.title,
+      `${doc.file_name} (${formatFileSize(doc.file_size)})`,
+      doc.category,
+      doc.status.replace(/_/g, " "),
+      `v${doc.version}`,
+      doc.uploaded_by?.full_name || "Unknown",
+      new Date(doc.created_at).toLocaleDateString(),
+    ])
+    return { headers, rows }
+  }, [documents])
+
   if (documents.length === 0) {
     return (
       <Card>
@@ -82,9 +98,19 @@ export function DocumentsTable({ documents }: { documents: Document[] }) {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Documents</CardTitle>
-        <CardDescription>{documents.length} document(s) found</CardDescription>
+      <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
+        <div className="space-y-1.5">
+          <CardTitle>Documents</CardTitle>
+          <CardDescription>{documents.length} document(s) found</CardDescription>
+        </div>
+        <TableExportMenu
+          fileBaseName="documents"
+          sheetName="Documents"
+          title="Documents"
+          headers={exportData.headers}
+          rows={exportData.rows}
+          className="shrink-0"
+        />
       </CardHeader>
       <CardContent>
         <Table>

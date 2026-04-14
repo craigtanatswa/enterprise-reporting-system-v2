@@ -1,5 +1,6 @@
 "use client"
 
+import { useMemo } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
@@ -7,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Eye, TrendingUp, TrendingDown } from "lucide-react"
 import Link from "next/link"
 import { getDepartmentLabel } from "@/lib/utils/permissions"
+import { TableExportMenu } from "@/components/ui/table-export-menu"
 
 interface ProductionReport {
   id: string
@@ -47,6 +49,36 @@ export function ProductionReportsTable({ reports }: { reports: ProductionReport[
     return labels[shift] || shift
   }
 
+  const exportData = useMemo(() => {
+    const headers = [
+      "Date",
+      "Product",
+      "Department",
+      "Shift",
+      "Target",
+      "Actual",
+      "Achievement %",
+      "Status",
+      "Quality grade",
+    ]
+    const rows = reports.map((report) => {
+      const achievement = (Number(report.actual_quantity) / Number(report.target_quantity)) * 100
+      const u = report.unit
+      return [
+        new Date(report.report_date).toLocaleDateString(),
+        report.product_name,
+        getDepartmentLabel(report.department),
+        getShiftLabel(report.shift),
+        `${Number(report.target_quantity).toLocaleString()} ${u}`,
+        `${Number(report.actual_quantity).toLocaleString()} ${u}`,
+        `${achievement.toFixed(0)}%`,
+        report.status.replace(/_/g, " "),
+        report.quality_grade || "",
+      ]
+    })
+    return { headers, rows }
+  }, [reports])
+
   if (reports.length === 0) {
     return (
       <Card>
@@ -60,6 +92,15 @@ export function ProductionReportsTable({ reports }: { reports: ProductionReport[
   return (
     <Card>
       <CardContent className="p-0">
+        <div className="flex justify-end border-b px-4 py-2">
+          <TableExportMenu
+            fileBaseName="production-reports"
+            sheetName="Production"
+            title="Production reports"
+            headers={exportData.headers}
+            rows={exportData.rows}
+          />
+        </div>
         <Table>
           <TableHeader>
             <TableRow>

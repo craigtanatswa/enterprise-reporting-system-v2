@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { supabase } from "@/lib/supabase/client"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -15,6 +15,8 @@ import { getDepartmentLabel } from "@/lib/utils/permissions"
 import { DOCUMENT_STATUSES } from "@/lib/utils/dashboard-routing"
 import { useSearchParams } from "next/navigation"
 import { Suspense } from "react"
+import { TableExportMenu } from "@/components/ui/table-export-menu"
+import { buildStandardDocumentTableExport } from "@/lib/utils/documents-table-export"
 
 interface Document {
   id: string
@@ -84,6 +86,11 @@ export default function AuditAllDocumentsPage() {
     const matchesCategory = categoryFilter === "all" || doc.category === categoryFilter
     return matchesSearch && matchesDepartment && matchesCategory
   })
+
+  const auditDocExport = useMemo(
+    () => buildStandardDocumentTableExport(filteredDocuments, "Uploaded by"),
+    [filteredDocuments]
+  )
 
   const getStatusBadge = (status: string) => {
     const statusConfig = DOCUMENT_STATUSES.find((s) => s.value === status)
@@ -187,11 +194,23 @@ export default function AuditAllDocumentsPage() {
 
         {/* Documents Table */}
         <Card>
-          <CardHeader>
-            <CardTitle>All Department Documents</CardTitle>
-            <CardDescription>
-              Showing {filteredDocuments.length} documents across all departments
-            </CardDescription>
+          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
+            <div className="space-y-1.5">
+              <CardTitle>All Department Documents</CardTitle>
+              <CardDescription>
+                Showing {filteredDocuments.length} documents across all departments
+              </CardDescription>
+            </div>
+            {!loading && filteredDocuments.length > 0 && (
+              <TableExportMenu
+                fileBaseName="audit-all-documents"
+                sheetName="Documents"
+                title="All department documents (audit)"
+                headers={auditDocExport.headers}
+                rows={auditDocExport.rows}
+                className="shrink-0"
+              />
+            )}
           </CardHeader>
           <CardContent>
             <Table>

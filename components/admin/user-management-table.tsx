@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -36,6 +36,7 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { TableExportMenu } from "@/components/ui/table-export-menu"
 
 interface UserManagementTableProps {
   users: any[]
@@ -191,6 +192,25 @@ export function UserManagementTable({ users, currentUserId, currentUserRole }: U
 
     return matchesSearch && matchesRole && matchesDepartment && matchesStatus
   })
+
+  const userExport = useMemo(() => {
+    const headers = ["Name", "Email", "Role", "Department", "Status", "Approval", "Joined"]
+    const rows = filteredUsers.map((user) => {
+      let status = user.is_active ? "Active" : "Inactive"
+      if (user.requires_approval && !user.is_active) status = "Pending approval"
+      const approval = user.requires_approval && !user.is_active ? "Awaiting approval" : "—"
+      return [
+        user.full_name,
+        user.email,
+        getRoleLabel(user.role),
+        getDepartmentLabel(user.department),
+        status,
+        approval,
+        new Date(user.created_at).toLocaleDateString(),
+      ]
+    })
+    return { headers, rows }
+  }, [filteredUsers])
 
   const roles: UserRole[] = [
     "BOOTSTRAP_ADMIN",
@@ -348,8 +368,19 @@ export function UserManagementTable({ users, currentUserId, currentUserRole }: U
         )}
       </div>
 
-      <div className="text-sm text-muted-foreground">
-        Showing {filteredUsers.length} of {users.length} users
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="text-sm text-muted-foreground">
+          Showing {filteredUsers.length} of {users.length} users
+        </div>
+        <TableExportMenu
+          fileBaseName="users"
+          sheetName="Users"
+          title="User directory"
+          headers={userExport.headers}
+          rows={userExport.rows}
+          disabled={filteredUsers.length === 0}
+          className="shrink-0"
+        />
       </div>
 
       {/* Table */}

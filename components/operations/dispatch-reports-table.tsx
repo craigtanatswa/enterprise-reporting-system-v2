@@ -1,5 +1,6 @@
 "use client"
 
+import { useMemo } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
@@ -7,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Eye, Truck } from "lucide-react"
 import Link from "next/link"
 import { getDepartmentLabel } from "@/lib/utils/permissions"
+import { TableExportMenu } from "@/components/ui/table-export-menu"
 
 interface DispatchReport {
   id: string
@@ -24,6 +26,32 @@ interface DispatchReport {
 }
 
 export function DispatchReportsTable({ reports }: { reports: DispatchReport[] }) {
+  const exportData = useMemo(() => {
+    const headers = [
+      "Date",
+      "Vehicle",
+      "Driver",
+      "Product",
+      "Quantity",
+      "Customer",
+      "Invoice",
+      "Destination",
+      "Department",
+    ]
+    const rows = reports.map((r) => [
+      new Date(r.dispatch_date).toLocaleDateString(),
+      r.vehicle_number,
+      r.driver_name,
+      r.product_name,
+      `${Number(r.quantity).toLocaleString()} ${r.unit}`,
+      r.customer_name,
+      r.invoice_number || "",
+      r.destination,
+      getDepartmentLabel(r.department),
+    ])
+    return { headers, rows }
+  }, [reports])
+
   if (reports.length === 0) {
     return (
       <Card>
@@ -40,6 +68,15 @@ export function DispatchReportsTable({ reports }: { reports: DispatchReport[] })
   return (
     <Card>
       <CardContent className="p-0">
+        <div className="flex justify-end border-b px-4 py-2">
+          <TableExportMenu
+            fileBaseName="dispatch-reports"
+            sheetName="Dispatch"
+            title="Dispatch reports"
+            headers={exportData.headers}
+            rows={exportData.rows}
+          />
+        </div>
         <Table>
           <TableHeader>
             <TableRow>

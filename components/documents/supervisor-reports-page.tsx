@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { supabase } from "@/lib/supabase/client"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -15,6 +15,8 @@ import Link from "next/link"
 import { getDepartmentLabel, getSubDepartmentLabel } from "@/lib/utils/permissions"
 import { DOCUMENT_STATUSES } from "@/lib/utils/dashboard-routing"
 import { MDReviewButton } from "@/components/documents/md-review-button"
+import { TableExportMenu } from "@/components/ui/table-export-menu"
+import { buildStandardDocumentTableExport } from "@/lib/utils/documents-table-export"
 
 interface Document {
   id: string
@@ -112,6 +114,14 @@ export function SupervisorReportsPage({
 
   const departments = [...new Set(documents.map((d) => d.department))].filter(Boolean)
   const categories = [...new Set(documents.map((d) => d.category))].filter(Boolean)
+
+  const exportPending = useMemo(() => buildStandardDocumentTableExport(submittedDocs, "Submitted by"), [submittedDocs])
+  const exportReviewed = useMemo(() => buildStandardDocumentTableExport(reviewedDocs, "Submitted by"), [reviewedDocs])
+  const exportReturned = useMemo(() => buildStandardDocumentTableExport(returnedDocs, "Submitted by"), [returnedDocs])
+  const exportAll = useMemo(
+    () => buildStandardDocumentTableExport(filteredDocuments, "Submitted by"),
+    [filteredDocuments]
+  )
 
   const DocumentTable = ({ docs }: { docs: Document[] }) => (
     <Table>
@@ -310,9 +320,21 @@ export function SupervisorReportsPage({
         </TabsList>
         <TabsContent value="pending">
           <Card>
-            <CardHeader>
-              <CardTitle>Pending Review</CardTitle>
-              <CardDescription>Reports awaiting your review</CardDescription>
+            <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
+              <div className="space-y-1.5">
+                <CardTitle>Pending Review</CardTitle>
+                <CardDescription>Reports awaiting your review</CardDescription>
+              </div>
+              {submittedDocs.length > 0 && (
+                <TableExportMenu
+                  fileBaseName="supervisor-pending-review"
+                  sheetName="Pending"
+                  title="Supervisor — pending review"
+                  headers={exportPending.headers}
+                  rows={exportPending.rows}
+                  className="shrink-0"
+                />
+              )}
             </CardHeader>
             <CardContent>
               <DocumentTable docs={submittedDocs} />
@@ -321,9 +343,21 @@ export function SupervisorReportsPage({
         </TabsContent>
         <TabsContent value="reviewed">
           <Card>
-            <CardHeader>
-              <CardTitle>Reviewed Reports</CardTitle>
-              <CardDescription>Reports that have been reviewed</CardDescription>
+            <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
+              <div className="space-y-1.5">
+                <CardTitle>Reviewed Reports</CardTitle>
+                <CardDescription>Reports that have been reviewed</CardDescription>
+              </div>
+              {reviewedDocs.length > 0 && (
+                <TableExportMenu
+                  fileBaseName="supervisor-reviewed"
+                  sheetName="Reviewed"
+                  title="Supervisor — reviewed reports"
+                  headers={exportReviewed.headers}
+                  rows={exportReviewed.rows}
+                  className="shrink-0"
+                />
+              )}
             </CardHeader>
             <CardContent>
               <DocumentTable docs={reviewedDocs} />
@@ -332,9 +366,21 @@ export function SupervisorReportsPage({
         </TabsContent>
         <TabsContent value="returned">
           <Card>
-            <CardHeader>
-              <CardTitle>Returned Reports</CardTitle>
-              <CardDescription>Reports returned with comments</CardDescription>
+            <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
+              <div className="space-y-1.5">
+                <CardTitle>Returned Reports</CardTitle>
+                <CardDescription>Reports returned with comments</CardDescription>
+              </div>
+              {returnedDocs.length > 0 && (
+                <TableExportMenu
+                  fileBaseName="supervisor-returned"
+                  sheetName="Returned"
+                  title="Supervisor — returned reports"
+                  headers={exportReturned.headers}
+                  rows={exportReturned.rows}
+                  className="shrink-0"
+                />
+              )}
             </CardHeader>
             <CardContent>
               <DocumentTable docs={returnedDocs} />
@@ -343,9 +389,21 @@ export function SupervisorReportsPage({
         </TabsContent>
         <TabsContent value="all">
           <Card>
-            <CardHeader>
-              <CardTitle>All Reports</CardTitle>
-              <CardDescription>Complete list of reports from your departments</CardDescription>
+            <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
+              <div className="space-y-1.5">
+                <CardTitle>All Reports</CardTitle>
+                <CardDescription>Complete list of reports from your departments</CardDescription>
+              </div>
+              {filteredDocuments.length > 0 && (
+                <TableExportMenu
+                  fileBaseName="supervisor-all-reports"
+                  sheetName="All"
+                  title="Supervisor — all reports"
+                  headers={exportAll.headers}
+                  rows={exportAll.rows}
+                  className="shrink-0"
+                />
+              )}
             </CardHeader>
             <CardContent>
               <DocumentTable docs={filteredDocuments} />

@@ -1,11 +1,13 @@
 "use client"
 
+import { useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Clock } from "lucide-react"
 import Link from "next/link"
+import { TableExportMenu } from "@/components/ui/table-export-menu"
 
 interface PendingApproval {
   workflow_id: string
@@ -43,11 +45,37 @@ export function PendingApprovalsTable({ data }: { data: PendingApproval[] }) {
     return "Just now"
   }
 
+  const exportData = useMemo(() => {
+    const headers = ["Type", "Submitted by", "Department", "Level", "Pending since", "Approver role", "Step status"]
+    const rows = data.map((a) => [
+      getEntityLabel(a.entity_type),
+      a.submitted_by_name,
+      a.submitter_department,
+      `${a.current_level}/${a.total_levels}`,
+      formatTimeAgo(a.submitted_at),
+      a.approver_role,
+      a.step_status,
+    ])
+    return { headers, rows }
+  }, [data])
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Pending Approvals</CardTitle>
-        <CardDescription>Items awaiting review and approval</CardDescription>
+      <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
+        <div className="space-y-1.5">
+          <CardTitle>Pending Approvals</CardTitle>
+          <CardDescription>Items awaiting review and approval</CardDescription>
+        </div>
+        {data.length > 0 && (
+          <TableExportMenu
+            fileBaseName="pending-approvals"
+            sheetName="Pending"
+            title="Pending approvals"
+            headers={exportData.headers}
+            rows={exportData.rows}
+            className="shrink-0"
+          />
+        )}
       </CardHeader>
       <CardContent>
         {data.length === 0 ? (

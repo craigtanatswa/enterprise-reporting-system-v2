@@ -1,5 +1,6 @@
 "use client"
 
+import { useMemo } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
@@ -8,6 +9,7 @@ import { Eye, Cog } from "lucide-react"
 import Link from "next/link"
 import { getDepartmentLabel } from "@/lib/utils/permissions"
 import { Progress } from "@/components/ui/progress"
+import { TableExportMenu } from "@/components/ui/table-export-menu"
 
 interface ProcessingReport {
   id: string
@@ -25,6 +27,34 @@ interface ProcessingReport {
 }
 
 export function ProcessingReportsTable({ reports }: { reports: ProcessingReport[] }) {
+  const exportData = useMemo(() => {
+    const headers = [
+      "Date",
+      "Batch",
+      "Raw material",
+      "Raw qty",
+      "Processed",
+      "Waste",
+      "Efficiency %",
+      "Department",
+    ]
+    const rows = reports.map((report) => {
+      const efficiency = Number(report.efficiency_percentage) || 0
+      const u = report.unit
+      return [
+        new Date(report.report_date).toLocaleDateString(),
+        report.batch_number,
+        report.raw_material,
+        `${Number(report.raw_quantity).toLocaleString()} ${u}`,
+        `${Number(report.processed_quantity).toLocaleString()} ${u}`,
+        `${Number(report.waste_quantity).toLocaleString()} ${u}`,
+        `${efficiency.toFixed(0)}%`,
+        getDepartmentLabel(report.department),
+      ]
+    })
+    return { headers, rows }
+  }, [reports])
+
   if (reports.length === 0) {
     return (
       <Card>
@@ -41,6 +71,15 @@ export function ProcessingReportsTable({ reports }: { reports: ProcessingReport[
   return (
     <Card>
       <CardContent className="p-0">
+        <div className="flex justify-end border-b px-4 py-2">
+          <TableExportMenu
+            fileBaseName="processing-reports"
+            sheetName="Processing"
+            title="Processing reports"
+            headers={exportData.headers}
+            rows={exportData.rows}
+          />
+        </div>
         <Table>
           <TableHeader>
             <TableRow>

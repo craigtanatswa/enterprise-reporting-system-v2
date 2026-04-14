@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { upsertSalesRevenueMonthAction } from "@/app/actions/kpi-dashboard"
+import { TableExportMenu } from "@/components/ui/table-export-menu"
 
 const MONTH_NAMES = [
   "January",
@@ -106,14 +107,36 @@ export function KpiSalesRevenueMonthlyPanel({
     onSaved()
   }
 
+  const exportData = useMemo(() => {
+    const headers = ["Month", "Amount (USD)"]
+    const rows = MONTH_NAMES.map((name, i) => {
+      const month = i + 1
+      const raw = values[month]?.trim() ?? ""
+      const n = raw === "" ? 0 : parseFloat(raw)
+      const amount = canEdit ? (Number.isNaN(n) ? 0 : n) : (initialByMonth[month] ?? 0)
+      return [name, amount] as (string | number)[]
+    })
+    return { headers, rows }
+  }, [values, initialByMonth, canEdit])
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Sales by month ({year})</CardTitle>
-        <CardDescription>
-          Enter revenue per calendar month. Total Sales Revenue (YTD) on the dashboard is the sum of months from
-          January through {ytdCapMonth === 12 ? "December" : MONTH_NAMES[ytdCapMonth - 1]} for {year}.
-        </CardDescription>
+      <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
+        <div className="space-y-1.5">
+          <CardTitle>Sales by month ({year})</CardTitle>
+          <CardDescription>
+            Enter revenue per calendar month. Total Sales Revenue (YTD) on the dashboard is the sum of months from
+            January through {ytdCapMonth === 12 ? "December" : MONTH_NAMES[ytdCapMonth - 1]} for {year}.
+          </CardDescription>
+        </div>
+        <TableExportMenu
+          fileBaseName={`sales-revenue-monthly-${year}`}
+          sheetName={`Revenue ${year}`}
+          title={`Sales by month (${year})`}
+          headers={exportData.headers}
+          rows={exportData.rows}
+          className="shrink-0"
+        />
       </CardHeader>
       <CardContent className="space-y-4">
         {message && <p className="text-sm text-destructive">{message}</p>}

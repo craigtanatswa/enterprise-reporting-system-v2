@@ -1,5 +1,6 @@
 "use client"
 
+import { useMemo } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
@@ -7,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Eye, CheckCircle2, Clock, XCircle } from "lucide-react"
 import Link from "next/link"
 import { Progress } from "@/components/ui/progress"
+import { TableExportMenu } from "@/components/ui/table-export-menu"
 
 interface ApprovalWorkflow {
   id: string
@@ -59,6 +61,19 @@ export function ApprovalWorkflowsTable({ workflows }: { workflows: ApprovalWorkf
     return labels[type] || type
   }
 
+  const exportData = useMemo(() => {
+    const headers = ["Type", "Submitted by", "Department", "Progress", "Status", "Submitted"]
+    const rows = workflows.map((w) => [
+      getEntityLabel(w.entity_type),
+      w.submitted_by?.full_name || "Unknown",
+      w.submitted_by?.department || "N/A",
+      `${w.current_level}/${w.total_levels}`,
+      w.status.replace(/_/g, " "),
+      new Date(w.submitted_at).toLocaleDateString(),
+    ])
+    return { headers, rows }
+  }, [workflows])
+
   if (workflows.length === 0) {
     return (
       <Card>
@@ -73,6 +88,15 @@ export function ApprovalWorkflowsTable({ workflows }: { workflows: ApprovalWorkf
   return (
     <Card>
       <CardContent className="p-0">
+        <div className="flex justify-end border-b px-4 py-2">
+          <TableExportMenu
+            fileBaseName="approval-workflows"
+            sheetName="Workflows"
+            title="Approval workflows"
+            headers={exportData.headers}
+            rows={exportData.rows}
+          />
+        </div>
         <Table>
           <TableHeader>
             <TableRow>

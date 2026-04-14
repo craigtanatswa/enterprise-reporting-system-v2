@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table"
 import { upsertSalesVolumeMonthCellAction } from "@/app/actions/kpi-dashboard"
 import { SALES_PRODUCT_VARIETIES } from "@/lib/kpi-dashboard/product-varieties"
+import { TableExportMenu } from "@/components/ui/table-export-menu"
 
 const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const
 
@@ -58,7 +59,6 @@ export function KpiSalesVolumeMonthlyPanel({
   useEffect(() => {
     setValues(buildValues(initialCells))
   }, [year, initialCells])
-  const [savingKey, setSavingKey] = useState<CellKey | null>(null)
   const [bulkPending, setBulkPending] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -96,34 +96,25 @@ export function KpiSalesVolumeMonthlyPanel({
     [rowYtdTotals]
   )
 
-  const saveCell = async (varietyId: string, month: number) => {
-    setMessage(null)
-    const k = buildKey(varietyId, month)
-    const raw = values[k]?.trim() ?? ""
-    const n = raw === "" ? 0 : parseFloat(raw)
-    if (raw !== "" && Number.isNaN(n)) {
-      setMessage("Enter a valid number or leave blank for zero.")
-      return
-    }
-    if (n < 0) {
-      setMessage("Volume cannot be negative.")
-      return
-    }
-    setSavingKey(k)
-    const res = await upsertSalesVolumeMonthCellAction({
-      segmentId,
-      year,
-      month,
-      varietyId,
-      volumeTonnes: n,
+  const volumeExport = useMemo(() => {
+    const headers = ["Category", "Variety", ...MONTH_SHORT, "YTD tonnes"]
+    const varietyRows = SALES_PRODUCT_VARIETIES.map((v) => {
+      const monthVals = MONTH_SHORT.map((_, i) => {
+        const month = i + 1
+        const raw = values[buildKey(v.id, month)]?.trim() ?? ""
+        const n = raw === "" ? 0 : parseFloat(raw)
+        return Number.isNaN(n) ? 0 : n
+      })
+      return [v.category, v.label, ...monthVals, rowYtdTotals[v.id] ?? 0] as (string | number)[]
     })
-    setSavingKey(null)
-    if (!res.ok) {
-      setMessage(res.error)
-      return
-    }
-    onSaved()
-  }
+    const totalRow = [
+      "",
+      "Month total",
+      ...MONTH_SHORT.map((_, i) => columnTotals[i + 1] ?? 0),
+      grandYtdTotal,
+    ] as (string | number)[]
+    return { headers, rows: [...varietyRows, totalRow] }
+  }, [values, rowYtdTotals, columnTotals, grandYtdTotal])
 
   const saveAllChanged = async () => {
     setMessage(null)
@@ -173,11 +164,20 @@ export function KpiSalesVolumeMonthlyPanel({
               for {year}): the variety with the largest share of that total.
             </CardDescription>
           </div>
-          {canEdit && (
-            <Button type="button" variant="secondary" disabled={bulkPending} onClick={saveAllChanged}>
-              {bulkPending ? "Saving…" : "Save all changes"}
-            </Button>
-          )}
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <TableExportMenu
+              fileBaseName={`sales-volume-by-variety-${year}`}
+              sheetName={`Volume ${year}`}
+              title={`Month-on-month volume by variety (${year})`}
+              headers={volumeExport.headers}
+              rows={volumeExport.rows}
+            />
+            {canEdit && (
+              <Button type="button" variant="secondary" disabled={bulkPending} onClick={saveAllChanged}>
+                {bulkPending ? "Saving…" : "Save all changes"}
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -208,29 +208,17 @@ export function KpiSalesVolumeMonthlyPanel({
                     const month = i + 1
                     const k = buildKey(v.id, month)
                     return (
-                      <TableCell key={month} className="p-1 align-top">
+                      <TableCell key={month} className="p-1 align-middle">
                         {canEdit ? (
-                          <div className="flex flex-col gap-1 items-stretch">
-                            <Input
-                              type="number"
-                              min={0}
-                              step="0.01"
-                              className="h-8 text-xs px-2"
-                              value={values[k] ?? ""}
-                              onChange={(e) => setValues((prev) => ({ ...prev, [k]: e.target.value }))}
-                              placeholder="0"
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 text-[10px] px-1"
-                              disabled={savingKey === k}
-                              onClick={() => saveCell(v.id, month)}
-                            >
-                              {savingKey === k ? "…" : "Save"}
-                            </Button>
-                          </div>
+                          <Input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            className="h-8 text-xs px-2"
+                            value={values[k] ?? ""}
+                            onChange={(e) => setValues((prev) => ({ ...prev, [k]: e.target.value }))}
+                            placeholder="0"
+                          />
                         ) : (
                           <span className="text-sm tabular-nums block text-center py-1">
                             {(initialCells[v.id]?.[month] ?? 0) || "—"}

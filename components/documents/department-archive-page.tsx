@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { Archive, Eye, Download } from "lucide-react"
 import Link from "next/link"
+import { TableExportMenu } from "@/components/ui/table-export-menu"
 
 interface DepartmentArchivePageProps {
   department: string
@@ -42,11 +43,39 @@ export async function DepartmentArchivePage({
 
       {/* Archive Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>Document Archive</CardTitle>
-          <CardDescription>
-            All approved documents are preserved here for audit and compliance purposes
-          </CardDescription>
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
+          <div className="space-y-1.5">
+            <CardTitle>Document Archive</CardTitle>
+            <CardDescription>
+              All approved documents are preserved here for audit and compliance purposes
+            </CardDescription>
+          </div>
+          {archivedDocs && archivedDocs.length > 0 && (
+            <TableExportMenu
+              fileBaseName={`${department}-archive`}
+              sheetName="Archive"
+              title={`${departmentLabel} document archive`}
+              headers={[
+                "Document title",
+                "Reporting period",
+                "Category",
+                "Versions",
+                "Approved date",
+                "Uploaded by",
+              ]}
+              rows={archivedDocs.map((doc) => [
+                doc.title,
+                doc.reporting_period || "",
+                (doc.category || "other").replace(/_/g, " "),
+                `v${doc.version || 1}${doc.versions && doc.versions.length > 0 ? ` (${doc.versions.length} total)` : ""}`,
+                doc.approved_at
+                  ? new Date(doc.approved_at).toLocaleDateString()
+                  : new Date(doc.updated_at || doc.created_at).toLocaleDateString(),
+                doc.uploaded_by?.full_name || "Unknown",
+              ])}
+              className="shrink-0"
+            />
+          )}
         </CardHeader>
         <CardContent>
           {!archivedDocs || archivedDocs.length === 0 ? (
