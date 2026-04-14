@@ -15,6 +15,8 @@ import {
   addKpiDepartmentCommentAction,
   addKpiMdCommentAction,
 } from "@/app/actions/kpi-dashboard"
+import { KpiSalesRevenueMonthlyPanel } from "@/components/kpi-dashboard/kpi-sales-revenue-monthly-panel"
+import { KpiSalesVolumeMonthlyPanel } from "@/components/kpi-dashboard/kpi-sales-volume-monthly-panel"
 
 const statusColors: Record<MetricStatus, string> = {
   green: "bg-[oklch(0.6_0.15_145)] text-white",
@@ -22,7 +24,19 @@ const statusColors: Record<MetricStatus, string> = {
   red: "bg-[oklch(0.6_0.2_25)] text-white",
 }
 
-export function KpiMetricDetail({ segmentId, metricId }: { segmentId: string; metricId: string }) {
+export function KpiMetricDetail({
+  segmentId,
+  metricId,
+  salesRevenueByMonth,
+  salesVolumeCells,
+  reportingYear,
+}: {
+  segmentId: string
+  metricId: string
+  salesRevenueByMonth?: Record<number, number>
+  salesVolumeCells?: Record<string, Record<number, number>>
+  reportingYear?: number
+}) {
   const router = useRouter()
   const {
     getDepartment,
@@ -157,6 +171,32 @@ export function KpiMetricDetail({ segmentId, metricId }: { segmentId: string; me
               )}
             </CardContent>
           </Card>
+
+          {metricId === "sales-revenue" &&
+            segmentId === "sales-marketing" &&
+            reportingYear != null &&
+            salesRevenueByMonth != null && (
+              <KpiSalesRevenueMonthlyPanel
+                segmentId={segmentId}
+                year={reportingYear}
+                initialByMonth={salesRevenueByMonth}
+                canEdit={canEditDepartmentMetrics}
+                onSaved={refresh}
+              />
+            )}
+
+          {metricId === "sales-volume-variety" &&
+            segmentId === "sales-marketing" &&
+            reportingYear != null &&
+            salesVolumeCells != null && (
+              <KpiSalesVolumeMonthlyPanel
+                segmentId={segmentId}
+                year={reportingYear}
+                initialCells={salesVolumeCells}
+                canEdit={canEditDepartmentMetrics}
+                onSaved={refresh}
+              />
+            )}
 
           {mdForMetric.length > 0 && (
             <Card className="border-[oklch(0.75_0.12_85)]">

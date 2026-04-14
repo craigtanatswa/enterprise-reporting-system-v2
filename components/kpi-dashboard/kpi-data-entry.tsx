@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { ArrowLeft, Save, MessageSquare } from "lucide-react"
@@ -80,18 +81,22 @@ export function KpiDataEntry({ segmentId }: { segmentId: string }) {
     }))
   }
 
+  const usesMonthlyBreakdown = (id: string) =>
+    id === "sales-revenue" || id === "sales-volume-variety"
+
   const saveMetric = async (metricId: string) => {
     const metric = department.metrics.find((m) => m.id === metricId)
     if (!metric) return
     const data = formData[metricId] ?? initForm(metric)
+    const skipHeadlineFields = usesMonthlyBreakdown(metricId)
     setSaving(true)
     await updateKpiMetricAction({
       segmentId,
       metricId,
-      value: data.value,
+      value: skipHeadlineFields ? String(metric.value) : data.value,
       status: data.status,
       trend: data.trend,
-      details: data.details,
+      details: skipHeadlineFields ? (metric.details ?? "") : data.details,
     })
     if (data.comment.trim()) {
       await addKpiDepartmentCommentAction({
@@ -115,13 +120,14 @@ export function KpiDataEntry({ segmentId }: { segmentId: string }) {
         details: m.details || "",
         comment: "",
       }
+      const skipHeadlineFields = usesMonthlyBreakdown(m.id)
       await updateKpiMetricAction({
         segmentId,
         metricId: m.id,
-        value: data.value,
+        value: skipHeadlineFields ? String(m.value) : data.value,
         status: data.status,
         trend: data.trend,
-        details: data.details,
+        details: skipHeadlineFields ? (m.details ?? "") : data.details,
       })
       if (data.comment.trim()) {
         await addKpiDepartmentCommentAction({
@@ -168,6 +174,17 @@ export function KpiDataEntry({ segmentId }: { segmentId: string }) {
                       Current: {metric.value}
                       {metric.unit ? ` ${metric.unit}` : ""}
                     </CardDescription>
+                    {usesMonthlyBreakdown(metric.id) && (
+                      <CardDescription className="pt-2 text-foreground">
+                        <Link
+                          href={`/dashboard/kpi/metric/${segmentId}/${metric.id}`}
+                          className="text-primary underline underline-offset-2"
+                        >
+                          Open the metric page
+                        </Link>{" "}
+                        to enter month-by-month figures. The headline value is calculated from those entries.
+                      </CardDescription>
+                    )}
                   </div>
                   <Badge className={cn("text-xs", statusColors[data.status])}>
                     {data.status.charAt(0).toUpperCase() + data.status.slice(1)}
@@ -182,6 +199,7 @@ export function KpiDataEntry({ segmentId }: { segmentId: string }) {
                       value={data.value}
                       onChange={(e) => patchForm(metric.id, { value: e.target.value })}
                       placeholder="Enter value"
+                      disabled={usesMonthlyBreakdown(metric.id)}
                     />
                   </div>
                   <div className="space-y-2">
@@ -223,6 +241,7 @@ export function KpiDataEntry({ segmentId }: { segmentId: string }) {
                     value={data.details}
                     onChange={(e) => patchForm(metric.id, { details: e.target.value })}
                     placeholder="Optional"
+                    disabled={usesMonthlyBreakdown(metric.id)}
                   />
                 </div>
                 <div className="space-y-2">

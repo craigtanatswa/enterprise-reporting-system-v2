@@ -12,6 +12,7 @@ import type { UserRole } from "@/lib/utils/permissions"
 import type { MetricStatus } from "@/lib/kpi-dashboard/types"
 import { applyMetricOverride, type KpiMetricOverrideRow } from "@/lib/kpi-dashboard/merge-server"
 import { initialDepartments } from "@/lib/kpi-dashboard/initial-data"
+import { SALES_PRODUCT_VARIETIES } from "@/lib/kpi-dashboard/product-varieties"
 
 function findSeedMetric(segmentId: string, metricId: string) {
   const dept = initialDepartments.find((d) => d.id === segmentId)
@@ -91,6 +92,118 @@ export async function updateKpiMetricAction(input: {
   revalidatePath("/dashboard/md/kpi")
   revalidatePath("/dashboard/kpi/metric/[segment]/[metricId]", "page")
 
+  return { ok: true as const }
+}
+
+function revalidateKpiMetricRoutes(segmentId: string, metricId: string) {
+  revalidatePath("/dashboard/kpi")
+  revalidatePath("/dashboard/md/kpi")
+  revalidatePath(`/dashboard/kpi/metric/${segmentId}/${metricId}`)
+}
+
+export async function upsertSalesRevenueMonthAction(input: {
+  segmentId: string
+  year: number
+  month: number
+  amountUsd: number
+}) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { ok: false as const, error: "Unauthorized" }
+
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+  if (!profile?.is_active) return { ok: false as const, error: "Inactive" }
+
+  const role = profile.role as UserRole
+  const dept = profile.department as Department | null
+  const sub = profile.sub_department as SubDepartment | null
+
+  if (!userMayUpdateSegment(role, dept, sub, input.segmentId)) {
+    return { ok: false as const, error: "Forbidden" }
+  }
+
+  if (input.month < 1 || input.month > 12) {
+    return { ok: false as const, error: "Invalid month" }
+  }
+
+  const amount = Number(input.amountUsd)
+  if (Number.isNaN(amount) || amount < 0) {
+    return { ok: false as const, error: "Invalid amount" }
+  }
+
+  const { error } = await supabase.from("kpi_sales_revenue_monthly").upsert(
+    {
+      segment_id: input.segmentId,
+      year: input.year,
+      month: input.month,
+      amount_usd: amount,
+      updated_at: new Date().toISOString(),
+      updated_by: user.id,
+    },
+    { onConflict: "segment_id,year,month" }
+  )
+
+  if (error) return { ok: false as const, error: error.message }
+
+  revalidateKpiMetricRoutes(input.segmentId, "sales-revenue")
+  return { ok: true as const }
+}
+
+export async function upsertSalesVolumeMonthCellAction(input: {
+  segmentId: string
+  year: number
+  month: number
+  varietyId: string
+  volumeTonnes: number
+}) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { ok: false as const, error: "Unauthorized" }
+
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+  if (!profile?.is_active) return { ok: false as const, error: "Inactive" }
+
+  const role = profile.role as UserRole
+  const dept = profile.department as Department | null
+  const sub = profile.sub_department as SubDepartment | null
+
+  if (!userMayUpdateSegment(role, dept, sub, input.segmentId)) {
+    return { ok: false as const, error: "Forbidden" }
+  }
+
+  if (input.month < 1 || input.month > 12) {
+    return { ok: false as const, error: "Invalid month" }
+  }
+
+  if (!SALES_PRODUCT_VARIETIES.some((v) => v.id === input.varietyId)) {
+    return { ok: false as const, error: "Unknown variety" }
+  }
+
+  const vol = Number(input.volumeTonnes)
+  if (Number.isNaN(vol) || vol < 0) {
+    return { ok: false as const, error: "Invalid volume" }
+  }
+
+  const { error } = await supabase.from("kpi_sales_volume_monthly").upsert(
+    {
+      segment_id: input.segmentId,
+      year: input.year,
+      month: input.month,
+      variety_id: input.varietyId,
+      volume_tonnes: vol,
+      updated_at: new Date().toISOString(),
+      updated_by: user.id,
+    },
+    { onConflict: "segment_id,year,month,variety_id" }
+  )
+
+  if (error) return { ok: false as const, error: error.message }
+
+  revalidateKpiMetricRoutes(input.segmentId, "sales-volume-variety")
   return { ok: true as const }
 }
 

@@ -2,6 +2,12 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import { initialDepartments, initialMDComments, getDepartmentScorecard } from "@/lib/kpi-dashboard/initial-data"
 import { executiveMetricSourceDetail } from "@/lib/kpi-dashboard/executive-bindings"
 import type { Comment, DepartmentData, MDComment, MetricData, MetricStatus } from "@/lib/kpi-dashboard/types"
+import {
+  deriveSalesRevenueYtd,
+  deriveVolumeVarietyKpi,
+  type RevenueMonthlyRow,
+  type VolumeMonthlyRow,
+} from "@/lib/kpi-dashboard/sales-monthly-metrics"
 
 export type KpiMetricOverrideRow = {
   segment_id: string
@@ -141,6 +147,47 @@ export async function loadKpiDashboardState(supabase: SupabaseClient): Promise<{
         metric.comments = asComments
       }
     }
+  }
+
+  try {
+    const salesSeg = "sales-marketing"
+    const now = new Date()
+    const y = now.getFullYear()
+    const [revRes, volRes] = await Promise.all([
+      supabase
+        .from("kpi_sales_revenue_monthly")
+        .select("month,amount_usd,updated_at")
+        .eq("segment_id", salesSeg)
+        .eq("year", y),
+      supabase
+        .from("kpi_sales_volume_monthly")
+        .select("month,variety_id,volume_tonnes,updated_at")
+        .eq("segment_id", salesSeg)
+        .eq("year", y),
+    ])
+    const sm = base.find((d) => d.id === salesSeg)
+    if (sm && !revRes.error && revRes.data?.length) {
+      const derived = deriveSalesRevenueYtd(revRes.data as RevenueMonthlyRow[], y, now)
+      const m = sm.metrics.find((x) => x.id === "sales-revenue")
+      if (derived && m) {
+        m.value = derived.ytd
+        m.lastUpdated = derived.lastUpdated
+        m.details =
+          "YTD total is the sum of monthly entries for the current calendar year (through the current month)."
+      }
+    }
+    if (sm && !volRes.error && volRes.data?.length) {
+      const derived = deriveVolumeVarietyKpi(volRes.data as VolumeMonthlyRow[], y, now)
+      const m = sm.metrics.find((x) => x.id === "sales-volume-variety")
+      if (derived && m) {
+        m.value = derived.value
+        m.details = derived.details
+        m.lastUpdated = derived.lastUpdated
+        m.unit = undefined
+      }
+    }
+  } catch {
+    // Tables may not exist until migration 021 is applied.
   }
 
   syncExecutiveFromDepartmentMetrics(base)
