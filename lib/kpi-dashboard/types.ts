@@ -19,6 +19,10 @@ export interface MetricData {
   comments: Comment[]
   details?: string
   lastUpdated: string
+  /** Optional sparkline-style seed data for UI that supports it */
+  chart?: {
+    points: { label: string; value: number }[]
+  }
 }
 
 export interface DepartmentData {

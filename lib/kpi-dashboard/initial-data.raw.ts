@@ -307,29 +307,24 @@ export const initialDepartments: DepartmentData[] = [
       {
         id: "mfg-dispatch",
         name: "Dispatch Volume",
-        value: 2500,
+        value: 0,
         unit: "tonnes",
         status: "green",
-        trend: "up",
+        trend: "stable",
+        details:
+          "Tonnes dispatched by variety are entered on the metric page (monthly grid). The headline is total year-to-date tonnes through the current month.",
         comments: [],
         lastUpdated: STATIC_TIMESTAMP,
       },
       {
         id: "mfg-efficiency",
         name: "Processing Efficiency",
-        value: 89,
-        unit: "%",
-        target: 95,
+        value: "—",
         status: "amber",
-        trend: "up",
-        comments: [
-          {
-            id: "c2",
-            author: "Manufacturing Manager",
-            content: "New calibration on sorting machines improved efficiency by 3%.",
-            timestamp: "2026-03-28T09:00:00.000Z",
-          },
-        ],
+        trend: "stable",
+        details:
+          "Actual and target efficiency (%) by variety are entered on the metric page. The headline shows the variety with the lowest actual efficiency vs its target.",
+        comments: [],
         lastUpdated: STATIC_TIMESTAMP,
       },
       {
@@ -346,11 +341,13 @@ export const initialDepartments: DepartmentData[] = [
       {
         id: "mfg-cost-per-tonne",
         name: "Cost per Tonne Processed",
-        value: 85,
+        value: 0,
         unit: "USD",
         target: 80,
         status: "amber",
-        trend: "down",
+        trend: "stable",
+        details:
+          "Actual and target USD per tonne by variety are entered on the metric page. The headline shows the variety with the highest actual cost per tonne.",
         comments: [],
         lastUpdated: STATIC_TIMESTAMP,
       },
@@ -368,10 +365,12 @@ export const initialDepartments: DepartmentData[] = [
       {
         id: "mfg-finished-warehouse",
         name: "Finished Product in Warehouse",
-        value: 1800,
+        value: 0,
         unit: "tonnes",
         status: "green",
         trend: "stable",
+        details:
+          "Closing tonnes by variety are entered on the metric page (monthly grid). The headline is total stock on hand at the end of the current month.",
         comments: [],
         lastUpdated: STATIC_TIMESTAMP,
       },
@@ -1025,30 +1024,7 @@ export const initialDepartments: DepartmentData[] = [
   },
 ];
 
-// Department scorecard for executive dashboard
-export function getDepartmentScorecard(departments: DepartmentData[]) {
-  return departments
-    .filter((d) => d.id !== "executive")
-    .map((dept) => {
-      const metrics = dept.metrics;
-      const greenCount = metrics.filter((m) => m.status === "green").length;
-      const amberCount = metrics.filter((m) => m.status === "amber").length;
-      const redCount = metrics.filter((m) => m.status === "red").length;
-
-      let overallStatus: MetricStatus = "green";
-      if (redCount > 0) overallStatus = "red";
-      else if (amberCount > greenCount) overallStatus = "amber";
-
-      return {
-        id: dept.id,
-        name: dept.shortName,
-        status: overallStatus,
-        greenCount,
-        amberCount,
-        redCount,
-      };
-    });
-}
+export { getDepartmentScorecard } from "./get-department-scorecard"
 
 // Map executive metrics to department sources
 export const executiveMetricSources: Record<string, string> = {

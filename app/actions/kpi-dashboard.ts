@@ -395,6 +395,311 @@ export async function upsertMfgPackagedSeedMonthCellAction(input: {
   return { ok: true as const }
 }
 
+export async function upsertMfgDispatchVolumeMonthCellAction(input: {
+  segmentId: string
+  year: number
+  month: number
+  varietyId: string
+  tonnesDispatched: number
+}) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { ok: false as const, error: "Unauthorized" }
+
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+  if (!profile?.is_active) return { ok: false as const, error: "Inactive" }
+
+  const role = profile.role as UserRole
+  const dept = profile.department as Department | null
+  const sub = profile.sub_department as SubDepartment | null
+
+  if (!userMayUpdateSegment(role, dept, sub, input.segmentId)) {
+    return { ok: false as const, error: "Forbidden" }
+  }
+
+  if (input.segmentId !== MFG_SEGMENT) {
+    return { ok: false as const, error: "Invalid segment" }
+  }
+
+  if (input.month < 1 || input.month > 12) {
+    return { ok: false as const, error: "Invalid month" }
+  }
+
+  if (!SALES_PRODUCT_VARIETIES.some((v) => v.id === input.varietyId)) {
+    return { ok: false as const, error: "Unknown variety" }
+  }
+
+  const tonnes = Number(input.tonnesDispatched)
+  if (Number.isNaN(tonnes) || tonnes < 0) {
+    return { ok: false as const, error: "Invalid tonnes" }
+  }
+
+  const { error } = await supabase.from("kpi_mfg_dispatch_volume_monthly").upsert(
+    {
+      segment_id: input.segmentId,
+      year: input.year,
+      month: input.month,
+      variety_id: input.varietyId,
+      tonnes_dispatched: tonnes,
+      updated_at: new Date().toISOString(),
+      updated_by: user.id,
+    },
+    { onConflict: "segment_id,year,month,variety_id" }
+  )
+
+  if (error) return { ok: false as const, error: error.message }
+
+  revalidateKpiMetricRoutes(input.segmentId, "mfg-dispatch")
+  return { ok: true as const }
+}
+
+export async function upsertMfgFinishedProductWarehouseMonthCellAction(input: {
+  segmentId: string
+  year: number
+  month: number
+  varietyId: string
+  tonnesInWarehouse: number
+}) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { ok: false as const, error: "Unauthorized" }
+
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+  if (!profile?.is_active) return { ok: false as const, error: "Inactive" }
+
+  const role = profile.role as UserRole
+  const dept = profile.department as Department | null
+  const sub = profile.sub_department as SubDepartment | null
+
+  if (!userMayUpdateSegment(role, dept, sub, input.segmentId)) {
+    return { ok: false as const, error: "Forbidden" }
+  }
+
+  if (input.segmentId !== MFG_SEGMENT) {
+    return { ok: false as const, error: "Invalid segment" }
+  }
+
+  if (input.month < 1 || input.month > 12) {
+    return { ok: false as const, error: "Invalid month" }
+  }
+
+  if (!SALES_PRODUCT_VARIETIES.some((v) => v.id === input.varietyId)) {
+    return { ok: false as const, error: "Unknown variety" }
+  }
+
+  const tonnes = Number(input.tonnesInWarehouse)
+  if (Number.isNaN(tonnes) || tonnes < 0) {
+    return { ok: false as const, error: "Invalid tonnes" }
+  }
+
+  const { error } = await supabase.from("kpi_mfg_finished_product_warehouse_monthly").upsert(
+    {
+      segment_id: input.segmentId,
+      year: input.year,
+      month: input.month,
+      variety_id: input.varietyId,
+      tonnes_in_warehouse: tonnes,
+      updated_at: new Date().toISOString(),
+      updated_by: user.id,
+    },
+    { onConflict: "segment_id,year,month,variety_id" }
+  )
+
+  if (error) return { ok: false as const, error: error.message }
+
+  revalidateKpiMetricRoutes(input.segmentId, "mfg-finished-warehouse")
+  return { ok: true as const }
+}
+
+const MFG_TONNES_TARGET_METRIC_IDS = [
+  "mfg-processed-output",
+  "mfg-packaged",
+  "mfg-finished-warehouse",
+] as const
+
+export async function upsertMfgTonnesTargetByVarietyAction(input: {
+  segmentId: string
+  year: number
+  metricId: (typeof MFG_TONNES_TARGET_METRIC_IDS)[number]
+  rows: { varietyId: string; targetTonnes: number }[]
+}) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { ok: false as const, error: "Unauthorized" }
+
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+  if (!profile?.is_active) return { ok: false as const, error: "Inactive" }
+
+  const role = profile.role as UserRole
+  const dept = profile.department as Department | null
+  const sub = profile.sub_department as SubDepartment | null
+
+  if (!userMayUpdateSegment(role, dept, sub, input.segmentId)) {
+    return { ok: false as const, error: "Forbidden" }
+  }
+
+  if (input.segmentId !== MFG_SEGMENT) {
+    return { ok: false as const, error: "Invalid segment" }
+  }
+
+  if (!(MFG_TONNES_TARGET_METRIC_IDS as readonly string[]).includes(input.metricId)) {
+    return { ok: false as const, error: "Invalid metric" }
+  }
+
+  const now = new Date().toISOString()
+  const payload = []
+  for (const r of input.rows) {
+    if (!SALES_PRODUCT_VARIETIES.some((v) => v.id === r.varietyId)) {
+      return { ok: false as const, error: "Unknown variety" }
+    }
+    const tonnes = Number(r.targetTonnes)
+    if (Number.isNaN(tonnes) || tonnes < 0) {
+      return { ok: false as const, error: "Invalid target" }
+    }
+    payload.push({
+      segment_id: input.segmentId,
+      year: input.year,
+      metric_id: input.metricId,
+      variety_id: r.varietyId,
+      target_tonnes: tonnes,
+      updated_at: now,
+      updated_by: user.id,
+    })
+  }
+
+  const { error } = await supabase.from("kpi_mfg_tonnes_target_by_variety").upsert(payload, {
+    onConflict: "segment_id,year,metric_id,variety_id",
+  })
+
+  if (error) return { ok: false as const, error: error.message }
+
+  revalidateKpiMetricRoutes(input.segmentId, input.metricId)
+  return { ok: true as const }
+}
+
+export async function upsertMfgCostPerTonneVarietyAction(input: {
+  segmentId: string
+  varietyId: string
+  costUsdPerTonne: number
+  targetUsdPerTonne: number
+}) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { ok: false as const, error: "Unauthorized" }
+
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+  if (!profile?.is_active) return { ok: false as const, error: "Inactive" }
+
+  const role = profile.role as UserRole
+  const dept = profile.department as Department | null
+  const sub = profile.sub_department as SubDepartment | null
+
+  if (!userMayUpdateSegment(role, dept, sub, input.segmentId)) {
+    return { ok: false as const, error: "Forbidden" }
+  }
+
+  if (input.segmentId !== MFG_SEGMENT) {
+    return { ok: false as const, error: "Invalid segment" }
+  }
+
+  if (!SALES_PRODUCT_VARIETIES.some((v) => v.id === input.varietyId)) {
+    return { ok: false as const, error: "Unknown variety" }
+  }
+
+  const usd = Number(input.costUsdPerTonne)
+  if (Number.isNaN(usd) || usd < 0) {
+    return { ok: false as const, error: "Invalid actual amount" }
+  }
+
+  const targetUsd = Number(input.targetUsdPerTonne)
+  if (Number.isNaN(targetUsd) || targetUsd < 0) {
+    return { ok: false as const, error: "Invalid target amount" }
+  }
+
+  const { error } = await supabase.from("kpi_mfg_cost_per_tonne_by_variety").upsert(
+    {
+      segment_id: input.segmentId,
+      variety_id: input.varietyId,
+      cost_usd_per_tonne: usd,
+      target_usd_per_tonne: targetUsd,
+      updated_at: new Date().toISOString(),
+      updated_by: user.id,
+    },
+    { onConflict: "segment_id,variety_id" }
+  )
+
+  if (error) return { ok: false as const, error: error.message }
+
+  revalidateKpiMetricRoutes(input.segmentId, "mfg-cost-per-tonne")
+  return { ok: true as const }
+}
+
+export async function upsertMfgProcessingEfficiencyVarietyAction(input: {
+  segmentId: string
+  varietyId: string
+  efficiencyPercent: number
+  targetPercent: number
+}) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { ok: false as const, error: "Unauthorized" }
+
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+  if (!profile?.is_active) return { ok: false as const, error: "Inactive" }
+
+  const role = profile.role as UserRole
+  const dept = profile.department as Department | null
+  const sub = profile.sub_department as SubDepartment | null
+
+  if (!userMayUpdateSegment(role, dept, sub, input.segmentId)) {
+    return { ok: false as const, error: "Forbidden" }
+  }
+
+  if (input.segmentId !== MFG_SEGMENT) {
+    return { ok: false as const, error: "Invalid segment" }
+  }
+
+  if (!SALES_PRODUCT_VARIETIES.some((v) => v.id === input.varietyId)) {
+    return { ok: false as const, error: "Unknown variety" }
+  }
+
+  const eff = Number(input.efficiencyPercent)
+  const tgt = Number(input.targetPercent)
+  if (Number.isNaN(eff) || eff < 0 || eff > 100) {
+    return { ok: false as const, error: "Actual efficiency must be between 0 and 100" }
+  }
+  if (Number.isNaN(tgt) || tgt < 0 || tgt > 100) {
+    return { ok: false as const, error: "Target must be between 0 and 100" }
+  }
+
+  const { error } = await supabase.from("kpi_mfg_processing_efficiency_by_variety").upsert(
+    {
+      segment_id: input.segmentId,
+      variety_id: input.varietyId,
+      efficiency_percent: eff,
+      target_percent: tgt,
+      updated_at: new Date().toISOString(),
+      updated_by: user.id,
+    },
+    { onConflict: "segment_id,variety_id" }
+  )
+
+  if (error) return { ok: false as const, error: error.message }
+
+  revalidateKpiMetricRoutes(input.segmentId, "mfg-efficiency")
+  return { ok: true as const }
+}
+
 export async function upsertFinanceInventoryVarietyAction(input: {
   segmentId: string
   varietyId: string

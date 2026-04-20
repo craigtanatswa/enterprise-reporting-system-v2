@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
-import { initialDepartments, initialMDComments, getDepartmentScorecard } from "@/lib/kpi-dashboard/initial-data"
+import { initialDepartments, initialMDComments } from "@/lib/kpi-dashboard/initial-data"
+import { getDepartmentScorecard } from "@/lib/kpi-dashboard/get-department-scorecard"
 import { executiveMetricSourceDetail } from "@/lib/kpi-dashboard/executive-bindings"
 import type { Comment, DepartmentData, MDComment, MetricData, MetricStatus } from "@/lib/kpi-dashboard/types"
 import {
@@ -23,11 +24,20 @@ import {
   type VolumeMonthlyRow,
 } from "@/lib/kpi-dashboard/sales-monthly-metrics"
 import {
+  deriveMfgFinishedWarehouseInventoryKpi,
   deriveMfgRawReceivedKpi,
   deriveMfgVarietyTonnesYtdTotals,
   type MfgRawSeedMonthlyRow,
   type MfgVarietyTonnesMonthlyRow,
 } from "@/lib/kpi-dashboard/mfg-raw-seed-metrics"
+import {
+  deriveMfgCostPerTonneKpi,
+  type MfgCostPerTonneDbRow,
+} from "@/lib/kpi-dashboard/mfg-cost-per-tonne-metrics"
+import {
+  deriveMfgProcessingEfficiencyKpi,
+  type MfgProcessingEfficiencyDbRow,
+} from "@/lib/kpi-dashboard/mfg-processing-efficiency-metrics"
 
 export type KpiMetricOverrideRow = {
   segment_id: string
@@ -176,7 +186,8 @@ export async function loadKpiDashboardState(supabase: SupabaseClient): Promise<{
     const financeSeg = "finance"
     const agronomySeg = "operations-agronomy"
     const mfgSeg = "operations-manufacturing"
-    const [revRes, volRes, finInvRes, agroRes, mfgRawRes, mfgProcRes, mfgPackRes] = await Promise.all([
+    const [revRes, volRes, finInvRes, agroRes, mfgRawRes, mfgProcRes, mfgPackRes, mfgDispRes, mfgFinishedRes, mfgCostRes, mfgEffRes] =
+      await Promise.all([
       supabase
         .from("kpi_sales_revenue_monthly")
         .select("month,amount_usd,updated_at")
@@ -207,6 +218,24 @@ export async function loadKpiDashboardState(supabase: SupabaseClient): Promise<{
         .select("month,variety_id,tonnes_packaged,updated_at")
         .eq("segment_id", mfgSeg)
         .eq("year", y),
+      supabase
+        .from("kpi_mfg_dispatch_volume_monthly")
+        .select("month,variety_id,tonnes_dispatched,updated_at")
+        .eq("segment_id", mfgSeg)
+        .eq("year", y),
+      supabase
+        .from("kpi_mfg_finished_product_warehouse_monthly")
+        .select("month,variety_id,tonnes_in_warehouse,updated_at")
+        .eq("segment_id", mfgSeg)
+        .eq("year", y),
+      supabase
+        .from("kpi_mfg_cost_per_tonne_by_variety")
+        .select("variety_id,cost_usd_per_tonne,target_usd_per_tonne,updated_at")
+        .eq("segment_id", mfgSeg),
+      supabase
+        .from("kpi_mfg_processing_efficiency_by_variety")
+        .select("variety_id,efficiency_percent,target_percent,updated_at")
+        .eq("segment_id", mfgSeg),
     ])
     const sm = base.find((d) => d.id === salesSeg)
     if (sm && !revRes.error && revRes.data?.length) {
@@ -362,8 +391,93 @@ export async function loadKpiDashboardState(supabase: SupabaseClient): Promise<{
         mPack.lastUpdated = derived.lastUpdated
       }
     }
+
+    const mfgDispRows = mfgDispRes.data
+    if (mfgDept && !mfgDispRes.error && mfgDispRows != null && mfgDispRows.length > 0) {
+      const normalized: MfgVarietyTonnesMonthlyRow[] = (mfgDispRows as Record<string, unknown>[]).map(
+        (r) => ({
+          month: Number(r.month),
+          variety_id: String(r.variety_id),
+          tonnes: Number(r.tonnes_dispatched),
+          updated_at: String(r.updated_at),
+        })
+      )
+      const derived = deriveMfgVarietyTonnesYtdTotals(normalized, y, now)
+      const mDisp = mfgDept.metrics.find((x) => x.id === "mfg-dispatch")
+      if (derived && mDisp) {
+        mDisp.value = derived.value
+        mDisp.unit = "tonnes"
+        mDisp.details = derived.details
+        mDisp.lastUpdated = derived.lastUpdated
+      }
+    }
+
+    const mfgFinishedRows = mfgFinishedRes.data
+    if (mfgDept && !mfgFinishedRes.error && mfgFinishedRows != null && mfgFinishedRows.length > 0) {
+      const normalized: MfgVarietyTonnesMonthlyRow[] = (mfgFinishedRows as Record<string, unknown>[]).map(
+        (r) => ({
+          month: Number(r.month),
+          variety_id: String(r.variety_id),
+          tonnes: Number(r.tonnes_in_warehouse),
+          updated_at: String(r.updated_at),
+        })
+      )
+      const derived = deriveMfgFinishedWarehouseInventoryKpi(normalized, y, now)
+      const mFin = mfgDept.metrics.find((x) => x.id === "mfg-finished-warehouse")
+      if (derived && mFin) {
+        mFin.value = derived.value
+        mFin.unit = "tonnes"
+        mFin.details = derived.details
+        mFin.lastUpdated = derived.lastUpdated
+      }
+    }
+
+    const mfgCostRows = mfgCostRes.data
+    const mfgProcForCost = mfgProcRes.data
+    if (mfgDept && !mfgCostRes.error && mfgCostRows != null && mfgCostRows.length > 0) {
+      const costNorm: MfgCostPerTonneDbRow[] = (mfgCostRows as Record<string, unknown>[]).map((r) => ({
+        variety_id: String(r.variety_id),
+        cost_usd_per_tonne: Number(r.cost_usd_per_tonne),
+        target_usd_per_tonne: Number(r.target_usd_per_tonne ?? 0),
+        updated_at: String(r.updated_at),
+      }))
+      const procForCost =
+        mfgProcForCost != null && mfgProcForCost.length > 0
+          ? (mfgProcForCost as Record<string, unknown>[]).map((r) => ({
+              month: Number(r.month),
+              variety_id: String(r.variety_id),
+              tonnes_processed: Number(r.tonnes_processed),
+            }))
+          : null
+      const derived = deriveMfgCostPerTonneKpi(costNorm, procForCost, now)
+      const mCost = mfgDept.metrics.find((x) => x.id === "mfg-cost-per-tonne")
+      if (derived && mCost) {
+        mCost.value = derived.value
+        mCost.unit = undefined
+        mCost.details = derived.details
+        mCost.lastUpdated = derived.lastUpdated
+      }
+    }
+
+    const mfgEffRows = mfgEffRes.data
+    if (mfgDept && !mfgEffRes.error && mfgEffRows != null && mfgEffRows.length > 0) {
+      const effNorm: MfgProcessingEfficiencyDbRow[] = (mfgEffRows as Record<string, unknown>[]).map((r) => ({
+        variety_id: String(r.variety_id),
+        efficiency_percent: Number(r.efficiency_percent),
+        target_percent: Number(r.target_percent ?? 0),
+        updated_at: String(r.updated_at),
+      }))
+      const derived = deriveMfgProcessingEfficiencyKpi(effNorm)
+      const mEff = mfgDept.metrics.find((x) => x.id === "mfg-efficiency")
+      if (derived && mEff) {
+        mEff.value = derived.value
+        mEff.unit = undefined
+        mEff.details = derived.details
+        mEff.lastUpdated = derived.lastUpdated
+      }
+    }
   } catch {
-    // Tables may not exist until migrations 021 / 022 / 023 / 025 / 026 are applied.
+    // Tables may not exist until migrations 021–028 / 030 are applied.
   }
 
   syncExecutiveFromDepartmentMetrics(base)

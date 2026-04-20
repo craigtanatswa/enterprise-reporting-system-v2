@@ -17,13 +17,18 @@ import {
 } from "@/app/actions/kpi-dashboard"
 import { KpiAgronomyVarietyPanel } from "@/components/kpi-dashboard/kpi-agronomy-variety-panel"
 import { KpiFinanceInventoryVarietyPanel } from "@/components/kpi-dashboard/kpi-finance-inventory-variety-panel"
+import { KpiMfgCostPerTonneVarietyPanel } from "@/components/kpi-dashboard/kpi-mfg-cost-per-tonne-variety-panel"
+import { KpiMfgProcessingEfficiencyVarietyPanel } from "@/components/kpi-dashboard/kpi-mfg-processing-efficiency-variety-panel"
 import { KpiSalesRevenueMonthlyPanel } from "@/components/kpi-dashboard/kpi-sales-revenue-monthly-panel"
 import { KpiSalesVolumeMonthlyPanel } from "@/components/kpi-dashboard/kpi-sales-volume-monthly-panel"
 import {
+  KpiMfgDispatchVolumeMonthlyPanel,
+  KpiMfgFinishedProductWarehouseMonthlyPanel,
   KpiMfgPackagedSeedMonthlyPanel,
   KpiMfgProcessedOutputMonthlyPanel,
   KpiMfgRawSeedMonthlyPanel,
 } from "@/components/kpi-dashboard/kpi-mfg-variety-monthly-panel"
+import { KpiMfgTonnesActualVsTargetTable } from "@/components/kpi-dashboard/kpi-mfg-tonnes-actual-vs-target-table"
 import {
   isAgronomyVarietyTableMetric,
   type AgronomyVarietyData,
@@ -43,6 +48,11 @@ export function KpiMetricDetail({
   mfgRawSeedCells,
   mfgProcessedCells,
   mfgPackagedCells,
+  mfgFinishedWarehouseCells,
+  mfgTonnesTargetsByVariety,
+  mfgDispatchCells,
+  mfgCostPerTonneByVariety,
+  mfgProcessingEfficiencyByVariety,
   financeInventoryByVariety,
   agronomyByVariety,
   reportingYear,
@@ -54,6 +64,11 @@ export function KpiMetricDetail({
   mfgRawSeedCells?: Record<string, Record<number, number>>
   mfgProcessedCells?: Record<string, Record<number, number>>
   mfgPackagedCells?: Record<string, Record<number, number>>
+  mfgFinishedWarehouseCells?: Record<string, Record<number, number>>
+  mfgTonnesTargetsByVariety?: Record<string, number>
+  mfgDispatchCells?: Record<string, Record<number, number>>
+  mfgCostPerTonneByVariety?: Record<string, { cost: number; target: number }>
+  mfgProcessingEfficiencyByVariety?: Record<string, { actual: number; target: number }>
   financeInventoryByVariety?: Record<string, number>
   agronomyByVariety?: Record<string, AgronomyVarietyData>
   reportingYear?: number
@@ -165,6 +180,22 @@ export function KpiMetricDetail({
                       <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{metric.details}</p>
                     )}
                   </div>
+                ) : metricId === "mfg-cost-per-tonne" && segmentId === "operations-manufacturing" ? (
+                  <div className="col-span-2">
+                    <p className="text-sm text-muted-foreground">Highest actual cost per tonne (among varieties)</p>
+                    <p className="text-3xl font-bold text-foreground">{metric.value}</p>
+                    {metric.details && (
+                      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{metric.details}</p>
+                    )}
+                  </div>
+                ) : metricId === "mfg-efficiency" && segmentId === "operations-manufacturing" ? (
+                  <div className="col-span-2">
+                    <p className="text-sm text-muted-foreground">Lowest actual processing efficiency (among varieties)</p>
+                    <p className="text-3xl font-bold text-foreground">{metric.value}</p>
+                    {metric.details && (
+                      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{metric.details}</p>
+                    )}
+                  </div>
                 ) : (
                   <div>
                     <p className="text-sm text-muted-foreground">Current value</p>
@@ -176,7 +207,12 @@ export function KpiMetricDetail({
                     </p>
                   </div>
                 )}
-                {!(metricId === "fin-inventory-levels" && segmentId === "finance") && metric.target != null && (
+                {!(
+                  (metricId === "fin-inventory-levels" && segmentId === "finance") ||
+                  (metricId === "mfg-cost-per-tonne" && segmentId === "operations-manufacturing") ||
+                  (metricId === "mfg-efficiency" && segmentId === "operations-manufacturing")
+                ) &&
+                  metric.target != null && (
                   <div>
                     <p className="text-sm text-muted-foreground">Target</p>
                     <p className="text-3xl font-bold text-foreground">
@@ -197,14 +233,65 @@ export function KpiMetricDetail({
                   </p>
                 </div>
               )}
-              {metric.details && !(metricId === "fin-inventory-levels" && segmentId === "finance") && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Additional details</p>
-                  <p className="text-foreground">{metric.details}</p>
-                </div>
-              )}
+              {metric.details &&
+                !(metricId === "fin-inventory-levels" && segmentId === "finance") &&
+                !(metricId === "mfg-cost-per-tonne" && segmentId === "operations-manufacturing") &&
+                !(metricId === "mfg-efficiency" && segmentId === "operations-manufacturing") && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Additional details</p>
+                    <p className="text-foreground">{metric.details}</p>
+                  </div>
+                )}
             </CardContent>
           </Card>
+
+          {metricId === "mfg-processed-output" &&
+            segmentId === "operations-manufacturing" &&
+            reportingYear != null &&
+            mfgProcessedCells != null &&
+            mfgTonnesTargetsByVariety != null && (
+              <KpiMfgTonnesActualVsTargetTable
+                segmentId={segmentId}
+                metricId="mfg-processed-output"
+                year={reportingYear}
+                cells={mfgProcessedCells}
+                initialTargetsByVariety={mfgTonnesTargetsByVariety}
+                canEdit={canEditDepartmentMetrics}
+                onSaved={refresh}
+              />
+            )}
+
+          {metricId === "mfg-packaged" &&
+            segmentId === "operations-manufacturing" &&
+            reportingYear != null &&
+            mfgPackagedCells != null &&
+            mfgTonnesTargetsByVariety != null && (
+              <KpiMfgTonnesActualVsTargetTable
+                segmentId={segmentId}
+                metricId="mfg-packaged"
+                year={reportingYear}
+                cells={mfgPackagedCells}
+                initialTargetsByVariety={mfgTonnesTargetsByVariety}
+                canEdit={canEditDepartmentMetrics}
+                onSaved={refresh}
+              />
+            )}
+
+          {metricId === "mfg-finished-warehouse" &&
+            segmentId === "operations-manufacturing" &&
+            reportingYear != null &&
+            mfgFinishedWarehouseCells != null &&
+            mfgTonnesTargetsByVariety != null && (
+              <KpiMfgTonnesActualVsTargetTable
+                segmentId={segmentId}
+                metricId="mfg-finished-warehouse"
+                year={reportingYear}
+                cells={mfgFinishedWarehouseCells}
+                initialTargetsByVariety={mfgTonnesTargetsByVariety}
+                canEdit={canEditDepartmentMetrics}
+                onSaved={refresh}
+              />
+            )}
 
           {metricId === "sales-revenue" &&
             segmentId === "sales-marketing" &&
@@ -266,6 +353,54 @@ export function KpiMetricDetail({
                 segmentId={segmentId}
                 year={reportingYear}
                 initialCells={mfgPackagedCells}
+                canEdit={canEditDepartmentMetrics}
+                onSaved={refresh}
+              />
+            )}
+
+          {metricId === "mfg-finished-warehouse" &&
+            segmentId === "operations-manufacturing" &&
+            reportingYear != null &&
+            mfgFinishedWarehouseCells != null && (
+              <KpiMfgFinishedProductWarehouseMonthlyPanel
+                segmentId={segmentId}
+                year={reportingYear}
+                initialCells={mfgFinishedWarehouseCells}
+                canEdit={canEditDepartmentMetrics}
+                onSaved={refresh}
+              />
+            )}
+
+          {metricId === "mfg-dispatch" &&
+            segmentId === "operations-manufacturing" &&
+            reportingYear != null &&
+            mfgDispatchCells != null && (
+              <KpiMfgDispatchVolumeMonthlyPanel
+                segmentId={segmentId}
+                year={reportingYear}
+                initialCells={mfgDispatchCells}
+                canEdit={canEditDepartmentMetrics}
+                onSaved={refresh}
+              />
+            )}
+
+          {metricId === "mfg-cost-per-tonne" &&
+            segmentId === "operations-manufacturing" &&
+            mfgCostPerTonneByVariety != null && (
+              <KpiMfgCostPerTonneVarietyPanel
+                segmentId={segmentId}
+                initialByVariety={mfgCostPerTonneByVariety}
+                canEdit={canEditDepartmentMetrics}
+                onSaved={refresh}
+              />
+            )}
+
+          {metricId === "mfg-efficiency" &&
+            segmentId === "operations-manufacturing" &&
+            mfgProcessingEfficiencyByVariety != null && (
+              <KpiMfgProcessingEfficiencyVarietyPanel
+                segmentId={segmentId}
+                initialByVariety={mfgProcessingEfficiencyByVariety}
                 canEdit={canEditDepartmentMetrics}
                 onSaved={refresh}
               />

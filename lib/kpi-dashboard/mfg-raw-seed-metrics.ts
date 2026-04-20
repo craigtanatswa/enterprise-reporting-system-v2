@@ -1,4 +1,4 @@
-import { getVarietyLabel } from "@/lib/kpi-dashboard/product-varieties"
+import { getVarietyLabel, SALES_PRODUCT_VARIETIES } from "@/lib/kpi-dashboard/product-varieties"
 
 export type MfgRawSeedMonthlyRow = {
   month: number
@@ -135,6 +135,68 @@ export function deriveMfgVarietyTonnesYtdTotals(
     detailLines.length > 0
       ? `Year-to-date through ${MONTH_NAMES[refM - 1]} ${year}: ` + detailLines.join(" | ")
       : ""
+
+  return {
+    value: total,
+    details,
+    lastUpdated: globalLastUpdated,
+  }
+}
+
+/**
+ * Finished product in warehouse: each row is **closing tonnes** at end of that month (per variety).
+ * Headline = total inventory on hand: sum over varieties of the forward-filled closing balance
+ * at the end of the reference month (empty months carry forward the last entered snapshot).
+ */
+export function deriveMfgFinishedWarehouseInventoryKpi(
+  rows: MfgVarietyTonnesMonthlyRow[],
+  year: number,
+  reference: Date
+): { value: number; details: string; lastUpdated: string } | null {
+  if (rows.length === 0) return null
+  const refY = reference.getFullYear()
+  const refM = reference.getMonth() + 1
+  if (year !== refY) return null
+
+  const byMonth = new Map<string, Map<number, number>>()
+  let globalLastUpdated = rows[0].updated_at
+
+  for (const r of rows) {
+    if (new Date(r.updated_at) > new Date(globalLastUpdated)) globalLastUpdated = r.updated_at
+    if (r.month > refM || r.month < 1) continue
+    let inner = byMonth.get(r.variety_id)
+    if (!inner) {
+      inner = new Map()
+      byMonth.set(r.variety_id, inner)
+    }
+    inner.set(r.month, Number(r.tonnes))
+  }
+
+  function closingTonnesAtEndOfMonth(varietyId: string, throughMonth: number): number {
+    const cells = byMonth.get(varietyId)
+    let last = 0
+    for (let m = 1; m <= throughMonth; m++) {
+      const t = cells?.get(m)
+      if (t !== undefined && !Number.isNaN(t)) last = t
+    }
+    return last
+  }
+
+  const breakdown: { id: string; t: number }[] = []
+  let total = 0
+  for (const v of SALES_PRODUCT_VARIETIES) {
+    const t = closingTonnesAtEndOfMonth(v.id, refM)
+    total += t
+    if (t > 0) breakdown.push({ id: v.id, t })
+  }
+  breakdown.sort((a, b) => b.t - a.t)
+
+  const detailLines = breakdown.map((x) => `${getVarietyLabel(x.id)}: ${fmtTonnes(x.t)} t`)
+
+  const details =
+    detailLines.length > 0
+      ? `Closing inventory end of ${MONTH_NAMES[refM - 1]} ${year}: ` + detailLines.join(" | ")
+      : `Closing inventory end of ${MONTH_NAMES[refM - 1]} ${year}: no stock recorded.`
 
   return {
     value: total,

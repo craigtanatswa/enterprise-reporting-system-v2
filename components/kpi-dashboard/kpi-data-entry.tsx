@@ -88,6 +88,10 @@ export function KpiDataEntry({ segmentId }: { segmentId: string }) {
     id === "mfg-raw-received" ||
     id === "mfg-processed-output" ||
     id === "mfg-packaged" ||
+    id === "mfg-finished-warehouse" ||
+    id === "mfg-dispatch" ||
+    id === "mfg-cost-per-tonne" ||
+    id === "mfg-efficiency" ||
     id === "fin-inventory-levels" ||
     (AGRONOMY_VARIETY_TABLE_METRIC_IDS as readonly string[]).includes(id)
 
@@ -191,9 +195,17 @@ export function KpiDataEntry({ segmentId }: { segmentId: string }) {
                         </Link>{" "}
                         {metric.id === "fin-inventory-levels"
                           ? "to enter inventory by variety. The headline shows the largest holding; ranks 2–4 are derived from the table."
-                          : metric.id === "mfg-raw-received"
+                          : metric.id === "mfg-cost-per-tonne"
+                            ? "to enter actual and target USD per tonne by variety. The headline shows the variety with the highest actual cost per tonne."
+                            : metric.id === "mfg-efficiency"
+                              ? "to enter actual and target processing efficiency (%) by variety. The headline shows the variety with the lowest actual efficiency."
+                              : metric.id === "mfg-raw-received"
                             ? "to enter tonnes received per variety by month. The headline shows the variety most recently saved and its year-to-date cumulative tonnes."
                             : metric.id === "mfg-processed-output" || metric.id === "mfg-packaged"
+                              ? "to enter monthly tonnes and annual plan on the metric page. Progress compares year-to-date actual to the annual plan."
+                            : metric.id === "mfg-finished-warehouse"
+                              ? "to enter closing tonnes by month and annual plan on the metric page. Progress compares closing actual to the annual plan."
+                            : metric.id === "mfg-dispatch"
                               ? "to enter tonnes per variety by month. The headline shows total year-to-date tonnes (all varieties) through the current month."
                               : (AGRONOMY_VARIETY_TABLE_METRIC_IDS as readonly string[]).includes(metric.id)
                                 ? "to enter figures by seed variety. The headline value is calculated from those rows."

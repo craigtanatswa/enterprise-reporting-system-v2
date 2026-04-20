@@ -20,6 +20,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import {
+  upsertMfgDispatchVolumeMonthCellAction,
+  upsertMfgFinishedProductWarehouseMonthCellAction,
   upsertMfgPackagedSeedMonthCellAction,
   upsertMfgProcessedOutputMonthCellAction,
   upsertMfgRawSeedMonthCellAction,
@@ -38,6 +40,27 @@ type CellKey = `${string}-${number}`
 
 function buildKey(varietyId: string, month: number): CellKey {
   return `${varietyId}-${month}` as CellKey
+}
+
+function parseCellTonnes(raw: string | undefined): number | undefined {
+  const t = raw?.trim() ?? ""
+  if (t === "") return undefined
+  const n = parseFloat(t)
+  return Number.isNaN(n) ? undefined : n
+}
+
+/** Closing inventory: last entered tonnes from Jan through `throughMonth` (carry forward over blank months). */
+function closingTonnesThroughMonth(
+  values: Record<CellKey, string>,
+  varietyId: string,
+  throughMonth: number
+): number {
+  let last = 0
+  for (let m = 1; m <= throughMonth; m++) {
+    const n = parseCellTonnes(values[buildKey(varietyId, m)])
+    if (n !== undefined) last = n
+  }
+  return last
 }
 
 export type MfgVarietyMonthlyCopy = {
@@ -68,6 +91,7 @@ function MfgVarietyMonthlyPanelInner({
   onSaved,
   copy,
   saveCell,
+  valuationMode = "flow",
 }: {
   segmentId: string
   year: number
@@ -76,6 +100,7 @@ function MfgVarietyMonthlyPanelInner({
   onSaved: () => void
   copy: MfgVarietyMonthlyCopy
   saveCell: SaveCellFn
+  valuationMode?: "flow" | "inventory"
 }) {
   const buildValues = (src: Record<string, Record<number, number>>) => {
     const o: Record<CellKey, string> = {}
@@ -107,6 +132,14 @@ function MfgVarietyMonthlyPanelInner({
   const columnTotals = useMemo(() => {
     const totals: Record<number, number> = {}
     for (let m = 1; m <= 12; m++) totals[m] = 0
+    if (valuationMode === "inventory") {
+      for (let m = 1; m <= 12; m++) {
+        for (const v of SALES_PRODUCT_VARIETIES) {
+          totals[m] += closingTonnesThroughMonth(values, v.id, m)
+        }
+      }
+      return totals
+    }
     for (const v of SALES_PRODUCT_VARIETIES) {
       for (let m = 1; m <= 12; m++) {
         const raw = values[buildKey(v.id, m)]?.trim() ?? ""
@@ -115,21 +148,25 @@ function MfgVarietyMonthlyPanelInner({
       }
     }
     return totals
-  }, [values])
+  }, [values, valuationMode])
 
   const rowYtdTotals = useMemo(() => {
     const totals: Record<string, number> = {}
     for (const v of SALES_PRODUCT_VARIETIES) {
-      let s = 0
-      for (let m = 1; m <= capMonth; m++) {
-        const raw = values[buildKey(v.id, m)]?.trim() ?? ""
-        const n = raw === "" ? 0 : parseFloat(raw)
-        if (!Number.isNaN(n)) s += n
+      if (valuationMode === "inventory") {
+        totals[v.id] = closingTonnesThroughMonth(values, v.id, capMonth)
+      } else {
+        let s = 0
+        for (let m = 1; m <= capMonth; m++) {
+          const raw = values[buildKey(v.id, m)]?.trim() ?? ""
+          const n = raw === "" ? 0 : parseFloat(raw)
+          if (!Number.isNaN(n)) s += n
+        }
+        totals[v.id] = s
       }
-      totals[v.id] = s
     }
     return totals
-  }, [values, capMonth])
+  }, [values, capMonth, valuationMode])
 
   const grandYtdTotal = useMemo(
     () => Object.values(rowYtdTotals).reduce((a, b) => a + b, 0),
@@ -139,29 +176,38 @@ function MfgVarietyMonthlyPanelInner({
   const cumulativeThroughMonth = useMemo(() => {
     const totals: Record<string, number> = {}
     for (const v of SALES_PRODUCT_VARIETIES) {
-      let s = 0
-      for (let m = 1; m <= viewThroughMonth; m++) {
-        const raw = values[buildKey(v.id, m)]?.trim() ?? ""
-        const n = raw === "" ? 0 : parseFloat(raw)
-        if (!Number.isNaN(n)) s += n
+      if (valuationMode === "inventory") {
+        totals[v.id] = closingTonnesThroughMonth(values, v.id, viewThroughMonth)
+      } else {
+        let s = 0
+        for (let m = 1; m <= viewThroughMonth; m++) {
+          const raw = values[buildKey(v.id, m)]?.trim() ?? ""
+          const n = raw === "" ? 0 : parseFloat(raw)
+          if (!Number.isNaN(n)) s += n
+        }
+        totals[v.id] = s
       }
-      totals[v.id] = s
     }
     return totals
-  }, [values, viewThroughMonth])
+  }, [values, viewThroughMonth, valuationMode])
 
   const cumulativeExport = useMemo(() => {
-    const headers = ["Category", "Variety", `Cumulative tonnes (Jan–${MONTH_SHORT[viewThroughMonth - 1]} ${year})`]
+    const periodHdr =
+      valuationMode === "inventory"
+        ? `Tonnes in warehouse (end ${MONTH_SHORT[viewThroughMonth - 1]} ${year})`
+        : `Cumulative tonnes (Jan–${MONTH_SHORT[viewThroughMonth - 1]} ${year})`
+    const headers = ["Category", "Variety", periodHdr]
     const rows = SALES_PRODUCT_VARIETIES.map((v) => {
       return [v.category, v.label, cumulativeThroughMonth[v.id] ?? 0] as (string | number)[]
     })
     const sum = Object.values(cumulativeThroughMonth).reduce((a, b) => a + b, 0)
     rows.push(["", "Total", sum])
     return { headers, rows }
-  }, [cumulativeThroughMonth, viewThroughMonth, year])
+  }, [cumulativeThroughMonth, viewThroughMonth, year, valuationMode])
 
   const monthlyGridExport = useMemo(() => {
-    const headers = ["Category", "Variety", ...MONTH_SHORT, "YTD tonnes"]
+    const periodLabel = valuationMode === "inventory" ? "Closing tonnes" : "YTD tonnes"
+    const headers = ["Category", "Variety", ...MONTH_SHORT, periodLabel]
     const varietyRows = SALES_PRODUCT_VARIETIES.map((v) => {
       const monthVals = MONTH_SHORT.map((_, i) => {
         const month = i + 1
@@ -178,7 +224,7 @@ function MfgVarietyMonthlyPanelInner({
       grandYtdTotal,
     ] as (string | number)[]
     return { headers, rows: [...varietyRows, totalRow] }
-  }, [values, rowYtdTotals, columnTotals, grandYtdTotal])
+  }, [values, rowYtdTotals, columnTotals, grandYtdTotal, valuationMode])
 
   const saveAllChanged = async () => {
     setMessage(null)
@@ -256,7 +302,9 @@ function MfgVarietyMonthlyPanelInner({
                       {label}
                     </TableHead>
                   ))}
-                  <TableHead className="text-right min-w-[90px]">YTD tonnes</TableHead>
+                  <TableHead className="text-right min-w-[90px]">
+                    {valuationMode === "inventory" ? "Closing tonnes" : "YTD tonnes"}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -318,7 +366,9 @@ function MfgVarietyMonthlyPanelInner({
         <CardHeader>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-2">
-              <CardTitle>Cumulative by end of month</CardTitle>
+              <CardTitle>
+                {valuationMode === "inventory" ? "Inventory at month-end" : "Cumulative by end of month"}
+              </CardTitle>
               <CardDescription>{copy.cumulativeDescription}</CardDescription>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-sm text-muted-foreground">Show totals through</span>
@@ -357,7 +407,9 @@ function MfgVarietyMonthlyPanelInner({
               <TableHeader>
                 <TableRow>
                   <TableHead className="min-w-[200px]">Variety</TableHead>
-                  <TableHead className="text-right min-w-[120px]">Cumulative tonnes</TableHead>
+                  <TableHead className="text-right min-w-[120px]">
+                    {valuationMode === "inventory" ? "Closing tonnes" : "Cumulative tonnes"}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -432,6 +484,34 @@ const PACKAGED_COPY: MfgVarietyMonthlyCopy = {
   exportCumulativeFileBasePrefix: "mfg-packaged-seed-cumulative",
   exportCumulativeSheet: "Cumulative",
   cumulativeExportTitle: (monthLabel, y) => `Packaged seed cumulative through ${monthLabel} ${y}`,
+}
+
+const FINISHED_WAREHOUSE_COPY: MfgVarietyMonthlyCopy = {
+  gridTitle: "Finished product in warehouse by variety",
+  gridDescription:
+    "Enter closing tonnes in warehouse at the end of each month (per variety). Empty months keep the previous closing figure. The headline is total stock on hand at the end of the current month.",
+  cumulativeDescription:
+    "Tonnes in warehouse at the end of the selected month (per variety and overall). Compare month-ends for period reporting.",
+  exportMonthlyFileBase: "mfg-finished-product-warehouse-monthly",
+  exportMonthlySheet: "Finished product warehouse",
+  exportMonthlyTitle: "Finished product in warehouse by month",
+  exportCumulativeFileBasePrefix: "mfg-finished-product-warehouse-cumulative",
+  exportCumulativeSheet: "Cumulative",
+  cumulativeExportTitle: (monthLabel, y) => `Finished product warehouse (end ${monthLabel} ${y})`,
+}
+
+const DISPATCH_COPY: MfgVarietyMonthlyCopy = {
+  gridTitle: "Dispatch volume by variety",
+  gridDescription:
+    "Tonnes dispatched in each month. The dashboard headline shows total year-to-date tonnes (all varieties) through the current month.",
+  cumulativeDescription:
+    "Total tonnes dispatched from January through the selected month (per variety and overall). Filter by month to match period-end reporting.",
+  exportMonthlyFileBase: "mfg-dispatch-volume-monthly",
+  exportMonthlySheet: "Dispatch volume",
+  exportMonthlyTitle: "Dispatch volume by month",
+  exportCumulativeFileBasePrefix: "mfg-dispatch-volume-cumulative",
+  exportCumulativeSheet: "Cumulative",
+  cumulativeExportTitle: (monthLabel, y) => `Dispatch volume cumulative through ${monthLabel} ${y}`,
 }
 
 export function KpiMfgRawSeedMonthlyPanel(props: {
@@ -514,6 +594,65 @@ export function KpiMfgPackagedSeedMonthlyPanel(props: {
           month: input.month,
           varietyId: input.varietyId,
           tonnesPackaged: input.tonnes,
+        })
+        return res.ok ? { ok: true } : { ok: false, error: res.error }
+      }}
+    />
+  )
+}
+
+export function KpiMfgFinishedProductWarehouseMonthlyPanel(props: {
+  segmentId: string
+  year: number
+  initialCells: Record<string, Record<number, number>>
+  canEdit: boolean
+  onSaved: () => void
+}) {
+  return (
+    <MfgVarietyMonthlyPanelInner
+      {...props}
+      valuationMode="inventory"
+      copy={{
+        ...FINISHED_WAREHOUSE_COPY,
+        gridTitle: `${FINISHED_WAREHOUSE_COPY.gridTitle} (${props.year})`,
+        exportMonthlyTitle: `${FINISHED_WAREHOUSE_COPY.exportMonthlyTitle} (${props.year})`,
+      }}
+      saveCell={async (input) => {
+        const res = await upsertMfgFinishedProductWarehouseMonthCellAction({
+          segmentId: input.segmentId,
+          year: input.year,
+          month: input.month,
+          varietyId: input.varietyId,
+          tonnesInWarehouse: input.tonnes,
+        })
+        return res.ok ? { ok: true } : { ok: false, error: res.error }
+      }}
+    />
+  )
+}
+
+export function KpiMfgDispatchVolumeMonthlyPanel(props: {
+  segmentId: string
+  year: number
+  initialCells: Record<string, Record<number, number>>
+  canEdit: boolean
+  onSaved: () => void
+}) {
+  return (
+    <MfgVarietyMonthlyPanelInner
+      {...props}
+      copy={{
+        ...DISPATCH_COPY,
+        gridTitle: `${DISPATCH_COPY.gridTitle} (${props.year})`,
+        exportMonthlyTitle: `${DISPATCH_COPY.exportMonthlyTitle} (${props.year})`,
+      }}
+      saveCell={async (input) => {
+        const res = await upsertMfgDispatchVolumeMonthCellAction({
+          segmentId: input.segmentId,
+          year: input.year,
+          month: input.month,
+          varietyId: input.varietyId,
+          tonnesDispatched: input.tonnes,
         })
         return res.ok ? { ok: true } : { ok: false, error: res.error }
       }}

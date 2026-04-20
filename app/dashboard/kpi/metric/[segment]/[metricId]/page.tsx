@@ -56,8 +56,35 @@ export default async function KpiMetricPage({
   let mfgRawSeedCells: Record<string, Record<number, number>> | undefined
   let mfgProcessedCells: Record<string, Record<number, number>> | undefined
   let mfgPackagedCells: Record<string, Record<number, number>> | undefined
+  let mfgFinishedWarehouseCells: Record<string, Record<number, number>> | undefined
+  let mfgDispatchCells: Record<string, Record<number, number>> | undefined
+  let mfgCostPerTonneByVariety:
+    | Record<string, { cost: number; target: number }>
+    | undefined
+  let mfgProcessingEfficiencyByVariety:
+    | Record<string, { actual: number; target: number }>
+    | undefined
   let financeInventoryByVariety: Record<string, number> | undefined
   let agronomyByVariety: Record<string, AgronomyVarietyData> | undefined
+  let mfgTonnesTargetsByVariety: Record<string, number> | undefined
+
+  if (
+    segment === "operations-manufacturing" &&
+    (metricId === "mfg-processed-output" ||
+      metricId === "mfg-packaged" ||
+      metricId === "mfg-finished-warehouse")
+  ) {
+    mfgTonnesTargetsByVariety = {}
+    const { data } = await supabase
+      .from("kpi_mfg_tonnes_target_by_variety")
+      .select("variety_id, target_tonnes")
+      .eq("segment_id", segment)
+      .eq("year", reportingYear)
+      .eq("metric_id", metricId)
+    for (const row of data ?? []) {
+      mfgTonnesTargetsByVariety[row.variety_id as string] = Number(row.target_tonnes)
+    }
+  }
 
   if (segment === "operations-agronomy" && isAgronomyVarietyTableMetric(metricId)) {
     agronomyByVariety = Object.fromEntries(
@@ -143,6 +170,72 @@ export default async function KpiMetricPage({
     }
   }
 
+  if (segment === "operations-manufacturing" && metricId === "mfg-finished-warehouse") {
+    const { data } = await supabase
+      .from("kpi_mfg_finished_product_warehouse_monthly")
+      .select("month, variety_id, tonnes_in_warehouse")
+      .eq("segment_id", segment)
+      .eq("year", reportingYear)
+    mfgFinishedWarehouseCells = {}
+    for (const row of data ?? []) {
+      const vid = row.variety_id as string
+      if (!mfgFinishedWarehouseCells[vid]) mfgFinishedWarehouseCells[vid] = {}
+      mfgFinishedWarehouseCells[vid][row.month as number] = Number(row.tonnes_in_warehouse)
+    }
+  }
+
+  if (segment === "operations-manufacturing" && metricId === "mfg-dispatch") {
+    const { data } = await supabase
+      .from("kpi_mfg_dispatch_volume_monthly")
+      .select("month, variety_id, tonnes_dispatched")
+      .eq("segment_id", segment)
+      .eq("year", reportingYear)
+    mfgDispatchCells = {}
+    for (const row of data ?? []) {
+      const vid = row.variety_id as string
+      if (!mfgDispatchCells[vid]) mfgDispatchCells[vid] = {}
+      mfgDispatchCells[vid][row.month as number] = Number(row.tonnes_dispatched)
+    }
+  }
+
+  if (segment === "operations-manufacturing" && metricId === "mfg-cost-per-tonne") {
+    mfgCostPerTonneByVariety = {}
+    const { data } = await supabase
+      .from("kpi_mfg_cost_per_tonne_by_variety")
+      .select("variety_id, cost_usd_per_tonne, target_usd_per_tonne")
+      .eq("segment_id", segment)
+    for (const row of data ?? []) {
+      const r = row as {
+        variety_id: string
+        cost_usd_per_tonne: number
+        target_usd_per_tonne?: number
+      }
+      mfgCostPerTonneByVariety[r.variety_id] = {
+        cost: Number(r.cost_usd_per_tonne),
+        target: Number(r.target_usd_per_tonne ?? 0),
+      }
+    }
+  }
+
+  if (segment === "operations-manufacturing" && metricId === "mfg-efficiency") {
+    mfgProcessingEfficiencyByVariety = {}
+    const { data } = await supabase
+      .from("kpi_mfg_processing_efficiency_by_variety")
+      .select("variety_id, efficiency_percent, target_percent")
+      .eq("segment_id", segment)
+    for (const row of data ?? []) {
+      const r = row as {
+        variety_id: string
+        efficiency_percent: number
+        target_percent?: number
+      }
+      mfgProcessingEfficiencyByVariety[r.variety_id] = {
+        actual: Number(r.efficiency_percent),
+        target: Number(r.target_percent ?? 0),
+      }
+    }
+  }
+
   if (segment === "finance" && metricId === "fin-inventory-levels") {
     financeInventoryByVariety = {}
     const { data } = await supabase
@@ -165,7 +258,9 @@ export default async function KpiMetricPage({
           : segment === "operations-manufacturing" &&
               (metricId === "mfg-raw-received" ||
                 metricId === "mfg-processed-output" ||
-                metricId === "mfg-packaged")
+                metricId === "mfg-packaged" ||
+                metricId === "mfg-finished-warehouse" ||
+                metricId === "mfg-dispatch")
             ? reportingYear
             : undefined
       }
@@ -174,6 +269,11 @@ export default async function KpiMetricPage({
       mfgRawSeedCells={mfgRawSeedCells}
       mfgProcessedCells={mfgProcessedCells}
       mfgPackagedCells={mfgPackagedCells}
+      mfgFinishedWarehouseCells={mfgFinishedWarehouseCells}
+      mfgTonnesTargetsByVariety={mfgTonnesTargetsByVariety}
+      mfgDispatchCells={mfgDispatchCells}
+      mfgCostPerTonneByVariety={mfgCostPerTonneByVariety}
+      mfgProcessingEfficiencyByVariety={mfgProcessingEfficiencyByVariety}
       financeInventoryByVariety={financeInventoryByVariety}
       agronomyByVariety={agronomyByVariety}
     />
