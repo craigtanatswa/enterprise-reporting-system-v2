@@ -15,9 +15,15 @@ import {
   addKpiDepartmentCommentAction,
   addKpiMdCommentAction,
 } from "@/app/actions/kpi-dashboard"
+import { KpiAgronomyVarietyPanel } from "@/components/kpi-dashboard/kpi-agronomy-variety-panel"
 import { KpiFinanceInventoryVarietyPanel } from "@/components/kpi-dashboard/kpi-finance-inventory-variety-panel"
 import { KpiSalesRevenueMonthlyPanel } from "@/components/kpi-dashboard/kpi-sales-revenue-monthly-panel"
 import { KpiSalesVolumeMonthlyPanel } from "@/components/kpi-dashboard/kpi-sales-volume-monthly-panel"
+import { KpiMfgRawSeedMonthlyPanel } from "@/components/kpi-dashboard/kpi-mfg-raw-seed-monthly-panel"
+import {
+  isAgronomyVarietyTableMetric,
+  type AgronomyVarietyData,
+} from "@/lib/kpi-dashboard/agronomy-metrics"
 
 const statusColors: Record<MetricStatus, string> = {
   green: "bg-[oklch(0.6_0.15_145)] text-white",
@@ -30,14 +36,18 @@ export function KpiMetricDetail({
   metricId,
   salesRevenueByMonth,
   salesVolumeCells,
+  mfgRawSeedCells,
   financeInventoryByVariety,
+  agronomyByVariety,
   reportingYear,
 }: {
   segmentId: string
   metricId: string
   salesRevenueByMonth?: Record<number, number>
   salesVolumeCells?: Record<string, Record<number, number>>
+  mfgRawSeedCells?: Record<string, Record<number, number>>
   financeInventoryByVariety?: Record<string, number>
+  agronomyByVariety?: Record<string, AgronomyVarietyData>
   reportingYear?: number
 }) {
   const router = useRouter()
@@ -214,12 +224,37 @@ export function KpiMetricDetail({
               />
             )}
 
+          {metricId === "mfg-raw-received" &&
+            segmentId === "operations-manufacturing" &&
+            reportingYear != null &&
+            mfgRawSeedCells != null && (
+              <KpiMfgRawSeedMonthlyPanel
+                segmentId={segmentId}
+                year={reportingYear}
+                initialCells={mfgRawSeedCells}
+                canEdit={canEditDepartmentMetrics}
+                onSaved={refresh}
+              />
+            )}
+
           {metricId === "fin-inventory-levels" &&
             segmentId === "finance" &&
             financeInventoryByVariety != null && (
               <KpiFinanceInventoryVarietyPanel
                 segmentId={segmentId}
                 initialByVariety={financeInventoryByVariety}
+                canEdit={canEditDepartmentMetrics}
+                onSaved={refresh}
+              />
+            )}
+
+          {segmentId === "operations-agronomy" &&
+            isAgronomyVarietyTableMetric(metricId) &&
+            agronomyByVariety != null && (
+              <KpiAgronomyVarietyPanel
+                segmentId={segmentId}
+                metricId={metricId}
+                initialByVariety={agronomyByVariety}
                 canEdit={canEditDepartmentMetrics}
                 onSaved={refresh}
               />

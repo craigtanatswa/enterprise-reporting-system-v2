@@ -7,11 +7,22 @@ import {
   type FinanceInventoryRow,
 } from "@/lib/kpi-dashboard/finance-inventory-metrics"
 import {
+  deriveAgroCropProgress,
+  deriveAgroHectares,
+  deriveAgroInputCostPerHa,
+  deriveAgroWeatherRisk,
+  deriveAgroYield,
+  deriveAgroYieldPerHa,
+  normalizeAgronomyVarietyRow,
+  type AgronomyVarietyDbRow,
+} from "@/lib/kpi-dashboard/agronomy-metrics"
+import {
   deriveSalesRevenueYtd,
   deriveVolumeVarietyKpi,
   type RevenueMonthlyRow,
   type VolumeMonthlyRow,
 } from "@/lib/kpi-dashboard/sales-monthly-metrics"
+import { deriveMfgRawReceivedKpi, type MfgRawSeedMonthlyRow } from "@/lib/kpi-dashboard/mfg-raw-seed-metrics"
 
 export type KpiMetricOverrideRow = {
   segment_id: string
@@ -158,7 +169,9 @@ export async function loadKpiDashboardState(supabase: SupabaseClient): Promise<{
     const now = new Date()
     const y = now.getFullYear()
     const financeSeg = "finance"
-    const [revRes, volRes, finInvRes] = await Promise.all([
+    const agronomySeg = "operations-agronomy"
+    const mfgSeg = "operations-manufacturing"
+    const [revRes, volRes, finInvRes, agroRes, mfgRawRes] = await Promise.all([
       supabase
         .from("kpi_sales_revenue_monthly")
         .select("month,amount_usd,updated_at")
@@ -173,6 +186,12 @@ export async function loadKpiDashboardState(supabase: SupabaseClient): Promise<{
         .from("kpi_finance_inventory_by_variety")
         .select("variety_id,inventory_tonnes,updated_at")
         .eq("segment_id", financeSeg),
+      supabase.from("kpi_agronomy_by_variety").select("*").eq("segment_id", agronomySeg),
+      supabase
+        .from("kpi_mfg_raw_seed_monthly")
+        .select("month,variety_id,tonnes_received,updated_at")
+        .eq("segment_id", mfgSeg)
+        .eq("year", y),
     ])
     const sm = base.find((d) => d.id === salesSeg)
     if (sm && !revRes.error && revRes.data?.length) {
@@ -209,8 +228,87 @@ export async function loadKpiDashboardState(supabase: SupabaseClient): Promise<{
         m.lastUpdated = derived.lastUpdated
       }
     }
+
+    const agDept = base.find((d) => d.id === agronomySeg)
+    const agData = agroRes.data
+    if (agDept && !agroRes.error && agData != null && agData.length > 0) {
+      const rows = (agData as AgronomyVarietyDbRow[]).map(normalizeAgronomyVarietyRow)
+
+      const dh = deriveAgroHectares(rows)
+      const mh = agDept.metrics.find((x) => x.id === "agro-hectares")
+      if (dh && mh) {
+        mh.value = dh.value
+        mh.unit = dh.unit
+        mh.details = dh.details
+        mh.lastUpdated = dh.lastUpdated
+      }
+
+      const dy = deriveAgroYield(rows)
+      const my = agDept.metrics.find((x) => x.id === "agro-yield")
+      if (dy && my) {
+        my.value = dy.value
+        my.unit = dy.unit
+        my.details = dy.details
+        my.lastUpdated = dy.lastUpdated
+      }
+
+      const dph = deriveAgroYieldPerHa(rows)
+      const mph = agDept.metrics.find((x) => x.id === "agro-yield-per-ha")
+      if (dph && mph) {
+        mph.value = dph.value
+        mph.unit = dph.unit
+        mph.details = dph.details
+        mph.lastUpdated = dph.lastUpdated
+      }
+
+      const dcp = deriveAgroCropProgress(rows)
+      const mcp = agDept.metrics.find((x) => x.id === "agro-crop-progress")
+      if (dcp && mcp) {
+        mcp.value = dcp.value
+        mcp.unit = dcp.unit
+        mcp.details = dcp.details
+        mcp.lastUpdated = dcp.lastUpdated
+      }
+
+      const dic = deriveAgroInputCostPerHa(rows)
+      const mic = agDept.metrics.find((x) => x.id === "agro-input-cost")
+      if (dic && mic) {
+        mic.value = dic.value
+        mic.unit = dic.unit
+        mic.details = dic.details
+        mic.lastUpdated = dic.lastUpdated
+      }
+
+      const dwr = deriveAgroWeatherRisk(rows)
+      const mwr = agDept.metrics.find((x) => x.id === "agro-weather-risk")
+      if (dwr && mwr) {
+        mwr.value = dwr.value
+        mwr.unit = undefined
+        mwr.details = dwr.details
+        mwr.lastUpdated = dwr.lastUpdated
+      }
+    }
+
+    const mfgDept = base.find((d) => d.id === mfgSeg)
+    const mfgRows = mfgRawRes.data
+    if (mfgDept && !mfgRawRes.error && mfgRows != null && mfgRows.length > 0) {
+      const normalized: MfgRawSeedMonthlyRow[] = (mfgRows as Record<string, unknown>[]).map((r) => ({
+        month: Number(r.month),
+        variety_id: String(r.variety_id),
+        tonnes_received: Number(r.tonnes_received),
+        updated_at: String(r.updated_at),
+      }))
+      const derived = deriveMfgRawReceivedKpi(normalized, y, now)
+      const mRaw = mfgDept.metrics.find((x) => x.id === "mfg-raw-received")
+      if (derived && mRaw) {
+        mRaw.value = derived.value
+        mRaw.unit = undefined
+        mRaw.details = derived.details
+        mRaw.lastUpdated = derived.lastUpdated
+      }
+    }
   } catch {
-    // Tables may not exist until migrations 021 / 022 are applied.
+    // Tables may not exist until migrations 021 / 022 / 023 / 025 are applied.
   }
 
   syncExecutiveFromDepartmentMetrics(base)

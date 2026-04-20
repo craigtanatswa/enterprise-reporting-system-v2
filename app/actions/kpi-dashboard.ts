@@ -13,6 +13,14 @@ import type { MetricStatus } from "@/lib/kpi-dashboard/types"
 import { applyMetricOverride, type KpiMetricOverrideRow } from "@/lib/kpi-dashboard/merge-server"
 import { initialDepartments } from "@/lib/kpi-dashboard/initial-data"
 import { SALES_PRODUCT_VARIETIES } from "@/lib/kpi-dashboard/product-varieties"
+import {
+  AGRONOMY_VARIETY_TABLE_METRIC_IDS,
+  normalizeAgronomyVarietyRow,
+  normalizeWeatherRiskLevel,
+  type AgronomyVarietyDbRow,
+} from "@/lib/kpi-dashboard/agronomy-metrics"
+
+const MFG_SEGMENT = "operations-manufacturing"
 
 function findSeedMetric(segmentId: string, metricId: string) {
   const dept = initialDepartments.find((d) => d.id === segmentId)
@@ -207,6 +215,66 @@ export async function upsertSalesVolumeMonthCellAction(input: {
   return { ok: true as const }
 }
 
+export async function upsertMfgRawSeedMonthCellAction(input: {
+  segmentId: string
+  year: number
+  month: number
+  varietyId: string
+  tonnesReceived: number
+}) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { ok: false as const, error: "Unauthorized" }
+
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+  if (!profile?.is_active) return { ok: false as const, error: "Inactive" }
+
+  const role = profile.role as UserRole
+  const dept = profile.department as Department | null
+  const sub = profile.sub_department as SubDepartment | null
+
+  if (!userMayUpdateSegment(role, dept, sub, input.segmentId)) {
+    return { ok: false as const, error: "Forbidden" }
+  }
+
+  if (input.segmentId !== MFG_SEGMENT) {
+    return { ok: false as const, error: "Invalid segment" }
+  }
+
+  if (input.month < 1 || input.month > 12) {
+    return { ok: false as const, error: "Invalid month" }
+  }
+
+  if (!SALES_PRODUCT_VARIETIES.some((v) => v.id === input.varietyId)) {
+    return { ok: false as const, error: "Unknown variety" }
+  }
+
+  const tonnes = Number(input.tonnesReceived)
+  if (Number.isNaN(tonnes) || tonnes < 0) {
+    return { ok: false as const, error: "Invalid tonnes" }
+  }
+
+  const { error } = await supabase.from("kpi_mfg_raw_seed_monthly").upsert(
+    {
+      segment_id: input.segmentId,
+      year: input.year,
+      month: input.month,
+      variety_id: input.varietyId,
+      tonnes_received: tonnes,
+      updated_at: new Date().toISOString(),
+      updated_by: user.id,
+    },
+    { onConflict: "segment_id,year,month,variety_id" }
+  )
+
+  if (error) return { ok: false as const, error: error.message }
+
+  revalidateKpiMetricRoutes(input.segmentId, "mfg-raw-received")
+  return { ok: true as const }
+}
+
 export async function upsertFinanceInventoryVarietyAction(input: {
   segmentId: string
   varietyId: string
@@ -252,6 +320,145 @@ export async function upsertFinanceInventoryVarietyAction(input: {
   if (error) return { ok: false as const, error: error.message }
 
   revalidateKpiMetricRoutes(input.segmentId, "fin-inventory-levels")
+  return { ok: true as const }
+}
+
+const AGRONOMY_SEGMENT = "operations-agronomy"
+
+function revalidateAllAgronomyVarietyMetricPages() {
+  revalidatePath("/dashboard/kpi")
+  revalidatePath("/dashboard/md/kpi")
+  for (const metricId of AGRONOMY_VARIETY_TABLE_METRIC_IDS) {
+    revalidatePath(`/dashboard/kpi/metric/${AGRONOMY_SEGMENT}/${metricId}`)
+  }
+}
+
+export async function upsertAgronomyVarietyFieldsAction(input: {
+  segmentId: string
+  varietyId: string
+  patch: Partial<{
+    hectares_planned: number
+    hectares_planted: number
+    expected_yield_tonnes: number
+    actual_yield_tonnes: number
+    yield_per_hectare: number
+    crop_progress_status: string
+    variety_performance: string
+    input_cost_per_hectare: number
+    weather_risk_level: string
+  }>
+}) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { ok: false as const, error: "Unauthorized" }
+
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+  if (!profile?.is_active) return { ok: false as const, error: "Inactive" }
+
+  const role = profile.role as UserRole
+  const dept = profile.department as Department | null
+  const sub = profile.sub_department as SubDepartment | null
+
+  if (!userMayUpdateSegment(role, dept, sub, input.segmentId)) {
+    return { ok: false as const, error: "Forbidden" }
+  }
+
+  if (input.segmentId !== AGRONOMY_SEGMENT) {
+    return { ok: false as const, error: "Invalid segment" }
+  }
+
+  if (!SALES_PRODUCT_VARIETIES.some((v) => v.id === input.varietyId)) {
+    return { ok: false as const, error: "Unknown variety" }
+  }
+
+  const keys = Object.keys(input.patch) as (keyof typeof input.patch)[]
+  if (keys.length === 0) {
+    return { ok: true as const }
+  }
+
+  const numericKeys = [
+    "hectares_planned",
+    "hectares_planted",
+    "expected_yield_tonnes",
+    "actual_yield_tonnes",
+    "yield_per_hectare",
+    "input_cost_per_hectare",
+  ] as const
+  for (const k of numericKeys) {
+    if (input.patch[k] === undefined) continue
+    const n = Number(input.patch[k])
+    if (Number.isNaN(n) || n < 0) {
+      return { ok: false as const, error: `Invalid ${k}` }
+    }
+  }
+
+  if (input.patch.weather_risk_level !== undefined) {
+    const raw = String(input.patch.weather_risk_level).trim()
+    const norm = normalizeWeatherRiskLevel(raw)
+    if (raw !== "" && norm === "") {
+      return { ok: false as const, error: "Invalid weather risk level" }
+    }
+  }
+
+  const { data: existing } = await supabase
+    .from("kpi_agronomy_by_variety")
+    .select("*")
+    .eq("segment_id", input.segmentId)
+    .eq("variety_id", input.varietyId)
+    .maybeSingle()
+
+  const base = existing
+    ? normalizeAgronomyVarietyRow(existing as AgronomyVarietyDbRow)
+    : {
+        variety_id: input.varietyId,
+        hectares_planned: 0,
+        hectares_planted: 0,
+        expected_yield_tonnes: 0,
+        actual_yield_tonnes: 0,
+        yield_per_hectare: 0,
+        crop_progress_status: "",
+        variety_performance: "",
+        input_cost_per_hectare: 0,
+        weather_risk_level: "",
+        updated_at: new Date().toISOString(),
+      }
+
+  const merged = { ...base }
+  for (const [k, v] of Object.entries(input.patch)) {
+    if (v === undefined) continue
+    if (k === "crop_progress_status" || k === "variety_performance") {
+      ;(merged as Record<string, unknown>)[k] = String(v).trim()
+    } else if (k === "weather_risk_level") {
+      ;(merged as Record<string, unknown>)[k] = normalizeWeatherRiskLevel(String(v))
+    } else {
+      ;(merged as Record<string, unknown>)[k] = Number(v)
+    }
+  }
+
+  const { error } = await supabase.from("kpi_agronomy_by_variety").upsert(
+    {
+      segment_id: input.segmentId,
+      variety_id: input.varietyId,
+      hectares_planned: merged.hectares_planned,
+      hectares_planted: merged.hectares_planted,
+      expected_yield_tonnes: merged.expected_yield_tonnes,
+      actual_yield_tonnes: merged.actual_yield_tonnes,
+      yield_per_hectare: merged.yield_per_hectare,
+      crop_progress_status: merged.crop_progress_status,
+      variety_performance: merged.variety_performance,
+      input_cost_per_hectare: merged.input_cost_per_hectare,
+      weather_risk_level: merged.weather_risk_level,
+      updated_at: new Date().toISOString(),
+      updated_by: user.id,
+    },
+    { onConflict: "segment_id,variety_id" }
+  )
+
+  if (error) return { ok: false as const, error: error.message }
+
+  revalidateAllAgronomyVarietyMetricPages()
   return { ok: true as const }
 }
 

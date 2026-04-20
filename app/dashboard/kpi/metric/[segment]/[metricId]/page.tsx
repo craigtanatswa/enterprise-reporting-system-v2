@@ -1,9 +1,32 @@
 import { KpiMetricDetail } from "@/components/kpi-dashboard/kpi-metric-detail"
 import { createClient } from "@/lib/supabase/server"
 import { userMayAccessSegment } from "@/lib/kpi-dashboard/segment-map"
+import {
+  isAgronomyVarietyTableMetric,
+  normalizeAgronomyVarietyRow,
+  type AgronomyVarietyData,
+  type AgronomyVarietyDbRow,
+} from "@/lib/kpi-dashboard/agronomy-metrics"
+import { SALES_PRODUCT_VARIETIES } from "@/lib/kpi-dashboard/product-varieties"
 import type { Department, SubDepartment } from "@/lib/utils/permissions"
 import type { UserRole } from "@/lib/utils/permissions"
 import { redirect } from "next/navigation"
+
+function emptyAgronomyVarietyRow(varietyId: string): AgronomyVarietyData {
+  return {
+    variety_id: varietyId,
+    hectares_planned: 0,
+    hectares_planted: 0,
+    expected_yield_tonnes: 0,
+    actual_yield_tonnes: 0,
+    yield_per_hectare: 0,
+    crop_progress_status: "",
+    variety_performance: "",
+    input_cost_per_hectare: 0,
+    weather_risk_level: "",
+    updated_at: new Date(0).toISOString(),
+  }
+}
 
 export default async function KpiMetricPage({
   params,
@@ -30,7 +53,25 @@ export default async function KpiMetricPage({
   const reportingYear = new Date().getFullYear()
   let salesRevenueByMonth: Record<number, number> | undefined
   let salesVolumeCells: Record<string, Record<number, number>> | undefined
+  let mfgRawSeedCells: Record<string, Record<number, number>> | undefined
   let financeInventoryByVariety: Record<string, number> | undefined
+  let agronomyByVariety: Record<string, AgronomyVarietyData> | undefined
+
+  if (segment === "operations-agronomy" && isAgronomyVarietyTableMetric(metricId)) {
+    agronomyByVariety = Object.fromEntries(
+      SALES_PRODUCT_VARIETIES.map((v) => [v.id, emptyAgronomyVarietyRow(v.id)])
+    )
+    const { data } = await supabase
+      .from("kpi_agronomy_by_variety")
+      .select("*")
+      .eq("segment_id", segment)
+    for (const row of data ?? []) {
+      const id = row.variety_id as string
+      if (agronomyByVariety[id]) {
+        agronomyByVariety[id] = normalizeAgronomyVarietyRow(row as AgronomyVarietyDbRow)
+      }
+    }
+  }
 
   if (segment === "sales-marketing" && metricId === "sales-revenue") {
     const { data } = await supabase
@@ -58,6 +99,20 @@ export default async function KpiMetricPage({
     }
   }
 
+  if (segment === "operations-manufacturing" && metricId === "mfg-raw-received") {
+    const { data } = await supabase
+      .from("kpi_mfg_raw_seed_monthly")
+      .select("month, variety_id, tonnes_received")
+      .eq("segment_id", segment)
+      .eq("year", reportingYear)
+    mfgRawSeedCells = {}
+    for (const row of data ?? []) {
+      const vid = row.variety_id as string
+      if (!mfgRawSeedCells[vid]) mfgRawSeedCells[vid] = {}
+      mfgRawSeedCells[vid][row.month as number] = Number(row.tonnes_received)
+    }
+  }
+
   if (segment === "finance" && metricId === "fin-inventory-levels") {
     financeInventoryByVariety = {}
     const { data } = await supabase
@@ -77,11 +132,15 @@ export default async function KpiMetricPage({
         segment === "sales-marketing" &&
         (metricId === "sales-revenue" || metricId === "sales-volume-variety")
           ? reportingYear
-          : undefined
+          : segment === "operations-manufacturing" && metricId === "mfg-raw-received"
+            ? reportingYear
+            : undefined
       }
       salesRevenueByMonth={salesRevenueByMonth}
       salesVolumeCells={salesVolumeCells}
+      mfgRawSeedCells={mfgRawSeedCells}
       financeInventoryByVariety={financeInventoryByVariety}
+      agronomyByVariety={agronomyByVariety}
     />
   )
 }

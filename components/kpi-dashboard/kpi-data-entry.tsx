@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils"
 import type { MetricStatus, MetricData } from "@/lib/kpi-dashboard/types"
 import { useKpiDashboard } from "@/components/kpi-dashboard/kpi-dashboard-provider"
 import { addKpiDepartmentCommentAction, updateKpiMetricAction } from "@/app/actions/kpi-dashboard"
+import { AGRONOMY_VARIETY_TABLE_METRIC_IDS } from "@/lib/kpi-dashboard/agronomy-metrics"
 
 const statusColors: Record<MetricStatus, string> = {
   green: "bg-[oklch(0.6_0.15_145)] text-white",
@@ -84,7 +85,9 @@ export function KpiDataEntry({ segmentId }: { segmentId: string }) {
   const usesMonthlyBreakdown = (id: string) =>
     id === "sales-revenue" ||
     id === "sales-volume-variety" ||
-    id === "fin-inventory-levels"
+    id === "mfg-raw-received" ||
+    id === "fin-inventory-levels" ||
+    (AGRONOMY_VARIETY_TABLE_METRIC_IDS as readonly string[]).includes(id)
 
   const saveMetric = async (metricId: string) => {
     const metric = department.metrics.find((m) => m.id === metricId)
@@ -186,7 +189,11 @@ export function KpiDataEntry({ segmentId }: { segmentId: string }) {
                         </Link>{" "}
                         {metric.id === "fin-inventory-levels"
                           ? "to enter inventory by variety. The headline shows the largest holding; ranks 2–4 are derived from the table."
-                          : "to enter month-by-month figures. The headline value is calculated from those entries."}
+                          : metric.id === "mfg-raw-received"
+                            ? "to enter tonnes received per variety by month. The headline shows the variety most recently saved and its year-to-date cumulative tonnes."
+                            : (AGRONOMY_VARIETY_TABLE_METRIC_IDS as readonly string[]).includes(metric.id)
+                              ? "to enter figures by seed variety. The headline value is calculated from those rows."
+                              : "to enter month-by-month figures. The headline value is calculated from those entries."}
                       </CardDescription>
                     )}
                   </div>
