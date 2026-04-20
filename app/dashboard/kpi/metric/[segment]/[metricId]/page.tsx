@@ -54,6 +54,8 @@ export default async function KpiMetricPage({
   let salesRevenueByMonth: Record<number, number> | undefined
   let salesVolumeCells: Record<string, Record<number, number>> | undefined
   let mfgRawSeedCells: Record<string, Record<number, number>> | undefined
+  let mfgProcessedCells: Record<string, Record<number, number>> | undefined
+  let mfgPackagedCells: Record<string, Record<number, number>> | undefined
   let financeInventoryByVariety: Record<string, number> | undefined
   let agronomyByVariety: Record<string, AgronomyVarietyData> | undefined
 
@@ -113,6 +115,34 @@ export default async function KpiMetricPage({
     }
   }
 
+  if (segment === "operations-manufacturing" && metricId === "mfg-processed-output") {
+    const { data } = await supabase
+      .from("kpi_mfg_processed_output_monthly")
+      .select("month, variety_id, tonnes_processed")
+      .eq("segment_id", segment)
+      .eq("year", reportingYear)
+    mfgProcessedCells = {}
+    for (const row of data ?? []) {
+      const vid = row.variety_id as string
+      if (!mfgProcessedCells[vid]) mfgProcessedCells[vid] = {}
+      mfgProcessedCells[vid][row.month as number] = Number(row.tonnes_processed)
+    }
+  }
+
+  if (segment === "operations-manufacturing" && metricId === "mfg-packaged") {
+    const { data } = await supabase
+      .from("kpi_mfg_packaged_seed_monthly")
+      .select("month, variety_id, tonnes_packaged")
+      .eq("segment_id", segment)
+      .eq("year", reportingYear)
+    mfgPackagedCells = {}
+    for (const row of data ?? []) {
+      const vid = row.variety_id as string
+      if (!mfgPackagedCells[vid]) mfgPackagedCells[vid] = {}
+      mfgPackagedCells[vid][row.month as number] = Number(row.tonnes_packaged)
+    }
+  }
+
   if (segment === "finance" && metricId === "fin-inventory-levels") {
     financeInventoryByVariety = {}
     const { data } = await supabase
@@ -132,13 +162,18 @@ export default async function KpiMetricPage({
         segment === "sales-marketing" &&
         (metricId === "sales-revenue" || metricId === "sales-volume-variety")
           ? reportingYear
-          : segment === "operations-manufacturing" && metricId === "mfg-raw-received"
+          : segment === "operations-manufacturing" &&
+              (metricId === "mfg-raw-received" ||
+                metricId === "mfg-processed-output" ||
+                metricId === "mfg-packaged")
             ? reportingYear
             : undefined
       }
       salesRevenueByMonth={salesRevenueByMonth}
       salesVolumeCells={salesVolumeCells}
       mfgRawSeedCells={mfgRawSeedCells}
+      mfgProcessedCells={mfgProcessedCells}
+      mfgPackagedCells={mfgPackagedCells}
       financeInventoryByVariety={financeInventoryByVariety}
       agronomyByVariety={agronomyByVariety}
     />

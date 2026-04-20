@@ -19,7 +19,11 @@ import { KpiAgronomyVarietyPanel } from "@/components/kpi-dashboard/kpi-agronomy
 import { KpiFinanceInventoryVarietyPanel } from "@/components/kpi-dashboard/kpi-finance-inventory-variety-panel"
 import { KpiSalesRevenueMonthlyPanel } from "@/components/kpi-dashboard/kpi-sales-revenue-monthly-panel"
 import { KpiSalesVolumeMonthlyPanel } from "@/components/kpi-dashboard/kpi-sales-volume-monthly-panel"
-import { KpiMfgRawSeedMonthlyPanel } from "@/components/kpi-dashboard/kpi-mfg-raw-seed-monthly-panel"
+import {
+  KpiMfgPackagedSeedMonthlyPanel,
+  KpiMfgProcessedOutputMonthlyPanel,
+  KpiMfgRawSeedMonthlyPanel,
+} from "@/components/kpi-dashboard/kpi-mfg-variety-monthly-panel"
 import {
   isAgronomyVarietyTableMetric,
   type AgronomyVarietyData,
@@ -37,6 +41,8 @@ export function KpiMetricDetail({
   salesRevenueByMonth,
   salesVolumeCells,
   mfgRawSeedCells,
+  mfgProcessedCells,
+  mfgPackagedCells,
   financeInventoryByVariety,
   agronomyByVariety,
   reportingYear,
@@ -46,6 +52,8 @@ export function KpiMetricDetail({
   salesRevenueByMonth?: Record<number, number>
   salesVolumeCells?: Record<string, Record<number, number>>
   mfgRawSeedCells?: Record<string, Record<number, number>>
+  mfgProcessedCells?: Record<string, Record<number, number>>
+  mfgPackagedCells?: Record<string, Record<number, number>>
   financeInventoryByVariety?: Record<string, number>
   agronomyByVariety?: Record<string, AgronomyVarietyData>
   reportingYear?: number
@@ -232,6 +240,32 @@ export function KpiMetricDetail({
                 segmentId={segmentId}
                 year={reportingYear}
                 initialCells={mfgRawSeedCells}
+                canEdit={canEditDepartmentMetrics}
+                onSaved={refresh}
+              />
+            )}
+
+          {metricId === "mfg-processed-output" &&
+            segmentId === "operations-manufacturing" &&
+            reportingYear != null &&
+            mfgProcessedCells != null && (
+              <KpiMfgProcessedOutputMonthlyPanel
+                segmentId={segmentId}
+                year={reportingYear}
+                initialCells={mfgProcessedCells}
+                canEdit={canEditDepartmentMetrics}
+                onSaved={refresh}
+              />
+            )}
+
+          {metricId === "mfg-packaged" &&
+            segmentId === "operations-manufacturing" &&
+            reportingYear != null &&
+            mfgPackagedCells != null && (
+              <KpiMfgPackagedSeedMonthlyPanel
+                segmentId={segmentId}
+                year={reportingYear}
+                initialCells={mfgPackagedCells}
                 canEdit={canEditDepartmentMetrics}
                 onSaved={refresh}
               />

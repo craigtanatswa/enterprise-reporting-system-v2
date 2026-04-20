@@ -249,20 +249,24 @@ export const initialDepartments: DepartmentData[] = [
       {
         id: "mfg-processed-output",
         name: "Processed Seed Output",
-        value: 2850,
+        value: 0,
         unit: "tonnes",
         status: "green",
-        trend: "up",
+        trend: "stable",
+        details:
+          "Tonnes processed by variety are entered on the metric page (monthly grid). The headline is total year-to-date tonnes through the current month.",
         comments: [],
         lastUpdated: STATIC_TIMESTAMP,
       },
       {
         id: "mfg-packaged",
         name: "Packaged Seed",
-        value: 2700,
+        value: 0,
         unit: "tonnes",
         status: "green",
-        trend: "up",
+        trend: "stable",
+        details:
+          "Tonnes packaged by variety are entered on the metric page (monthly grid). The headline is total year-to-date tonnes through the current month.",
         comments: [],
         lastUpdated: STATIC_TIMESTAMP,
       },

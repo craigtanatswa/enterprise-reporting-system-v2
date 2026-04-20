@@ -90,3 +90,55 @@ export function deriveMfgRawReceivedKpi(
     lastUpdated: globalLastUpdated,
   }
 }
+
+/** Shared row shape for processed / packaged monthly tables (tonnes summed per variety). */
+export type MfgVarietyTonnesMonthlyRow = {
+  month: number
+  variety_id: string
+  tonnes: number
+  updated_at: string
+}
+
+/**
+ * Headline = total YTD tonnes (all varieties, Jan–reference month). Details = per-variety YTD breakdown.
+ */
+export function deriveMfgVarietyTonnesYtdTotals(
+  rows: MfgVarietyTonnesMonthlyRow[],
+  year: number,
+  reference: Date
+): { value: number; details: string; lastUpdated: string } | null {
+  if (rows.length === 0) return null
+  const refY = reference.getFullYear()
+  const refM = reference.getMonth() + 1
+  if (year !== refY) return null
+
+  const ytdByVariety = new Map<string, number>()
+  let globalLastUpdated = rows[0].updated_at
+
+  for (const r of rows) {
+    if (new Date(r.updated_at) > new Date(globalLastUpdated)) globalLastUpdated = r.updated_at
+    if (r.month > refM) continue
+    const add = Number(r.tonnes)
+    if (Number.isNaN(add)) continue
+    ytdByVariety.set(r.variety_id, (ytdByVariety.get(r.variety_id) ?? 0) + add)
+  }
+
+  const total = [...ytdByVariety.values()].reduce((a, b) => a + b, 0)
+  if (total <= 0) return null
+
+  const detailLines = [...ytdByVariety.entries()]
+    .filter(([, t]) => t > 0)
+    .sort((a, b) => b[1] - a[1])
+    .map(([id, t]) => `${getVarietyLabel(id)}: ${fmtTonnes(t)} t`)
+
+  const details =
+    detailLines.length > 0
+      ? `Year-to-date through ${MONTH_NAMES[refM - 1]} ${year}: ` + detailLines.join(" | ")
+      : ""
+
+  return {
+    value: total,
+    details,
+    lastUpdated: globalLastUpdated,
+  }
+}

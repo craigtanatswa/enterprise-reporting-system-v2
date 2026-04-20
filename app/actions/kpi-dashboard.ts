@@ -275,6 +275,126 @@ export async function upsertMfgRawSeedMonthCellAction(input: {
   return { ok: true as const }
 }
 
+export async function upsertMfgProcessedOutputMonthCellAction(input: {
+  segmentId: string
+  year: number
+  month: number
+  varietyId: string
+  tonnesProcessed: number
+}) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { ok: false as const, error: "Unauthorized" }
+
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+  if (!profile?.is_active) return { ok: false as const, error: "Inactive" }
+
+  const role = profile.role as UserRole
+  const dept = profile.department as Department | null
+  const sub = profile.sub_department as SubDepartment | null
+
+  if (!userMayUpdateSegment(role, dept, sub, input.segmentId)) {
+    return { ok: false as const, error: "Forbidden" }
+  }
+
+  if (input.segmentId !== MFG_SEGMENT) {
+    return { ok: false as const, error: "Invalid segment" }
+  }
+
+  if (input.month < 1 || input.month > 12) {
+    return { ok: false as const, error: "Invalid month" }
+  }
+
+  if (!SALES_PRODUCT_VARIETIES.some((v) => v.id === input.varietyId)) {
+    return { ok: false as const, error: "Unknown variety" }
+  }
+
+  const tonnes = Number(input.tonnesProcessed)
+  if (Number.isNaN(tonnes) || tonnes < 0) {
+    return { ok: false as const, error: "Invalid tonnes" }
+  }
+
+  const { error } = await supabase.from("kpi_mfg_processed_output_monthly").upsert(
+    {
+      segment_id: input.segmentId,
+      year: input.year,
+      month: input.month,
+      variety_id: input.varietyId,
+      tonnes_processed: tonnes,
+      updated_at: new Date().toISOString(),
+      updated_by: user.id,
+    },
+    { onConflict: "segment_id,year,month,variety_id" }
+  )
+
+  if (error) return { ok: false as const, error: error.message }
+
+  revalidateKpiMetricRoutes(input.segmentId, "mfg-processed-output")
+  return { ok: true as const }
+}
+
+export async function upsertMfgPackagedSeedMonthCellAction(input: {
+  segmentId: string
+  year: number
+  month: number
+  varietyId: string
+  tonnesPackaged: number
+}) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { ok: false as const, error: "Unauthorized" }
+
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+  if (!profile?.is_active) return { ok: false as const, error: "Inactive" }
+
+  const role = profile.role as UserRole
+  const dept = profile.department as Department | null
+  const sub = profile.sub_department as SubDepartment | null
+
+  if (!userMayUpdateSegment(role, dept, sub, input.segmentId)) {
+    return { ok: false as const, error: "Forbidden" }
+  }
+
+  if (input.segmentId !== MFG_SEGMENT) {
+    return { ok: false as const, error: "Invalid segment" }
+  }
+
+  if (input.month < 1 || input.month > 12) {
+    return { ok: false as const, error: "Invalid month" }
+  }
+
+  if (!SALES_PRODUCT_VARIETIES.some((v) => v.id === input.varietyId)) {
+    return { ok: false as const, error: "Unknown variety" }
+  }
+
+  const tonnes = Number(input.tonnesPackaged)
+  if (Number.isNaN(tonnes) || tonnes < 0) {
+    return { ok: false as const, error: "Invalid tonnes" }
+  }
+
+  const { error } = await supabase.from("kpi_mfg_packaged_seed_monthly").upsert(
+    {
+      segment_id: input.segmentId,
+      year: input.year,
+      month: input.month,
+      variety_id: input.varietyId,
+      tonnes_packaged: tonnes,
+      updated_at: new Date().toISOString(),
+      updated_by: user.id,
+    },
+    { onConflict: "segment_id,year,month,variety_id" }
+  )
+
+  if (error) return { ok: false as const, error: error.message }
+
+  revalidateKpiMetricRoutes(input.segmentId, "mfg-packaged")
+  return { ok: true as const }
+}
+
 export async function upsertFinanceInventoryVarietyAction(input: {
   segmentId: string
   varietyId: string

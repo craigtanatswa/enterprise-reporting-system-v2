@@ -86,6 +86,8 @@ export function KpiDataEntry({ segmentId }: { segmentId: string }) {
     id === "sales-revenue" ||
     id === "sales-volume-variety" ||
     id === "mfg-raw-received" ||
+    id === "mfg-processed-output" ||
+    id === "mfg-packaged" ||
     id === "fin-inventory-levels" ||
     (AGRONOMY_VARIETY_TABLE_METRIC_IDS as readonly string[]).includes(id)
 
@@ -191,9 +193,11 @@ export function KpiDataEntry({ segmentId }: { segmentId: string }) {
                           ? "to enter inventory by variety. The headline shows the largest holding; ranks 2–4 are derived from the table."
                           : metric.id === "mfg-raw-received"
                             ? "to enter tonnes received per variety by month. The headline shows the variety most recently saved and its year-to-date cumulative tonnes."
-                            : (AGRONOMY_VARIETY_TABLE_METRIC_IDS as readonly string[]).includes(metric.id)
-                              ? "to enter figures by seed variety. The headline value is calculated from those rows."
-                              : "to enter month-by-month figures. The headline value is calculated from those entries."}
+                            : metric.id === "mfg-processed-output" || metric.id === "mfg-packaged"
+                              ? "to enter tonnes per variety by month. The headline shows total year-to-date tonnes (all varieties) through the current month."
+                              : (AGRONOMY_VARIETY_TABLE_METRIC_IDS as readonly string[]).includes(metric.id)
+                                ? "to enter figures by seed variety. The headline value is calculated from those rows."
+                                : "to enter month-by-month figures. The headline value is calculated from those entries."}
                       </CardDescription>
                     )}
                   </div>
