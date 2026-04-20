@@ -17,6 +17,7 @@ import {
 } from "@/app/actions/kpi-dashboard"
 import { KpiAgronomyVarietyPanel } from "@/components/kpi-dashboard/kpi-agronomy-variety-panel"
 import { KpiFinanceInventoryVarietyPanel } from "@/components/kpi-dashboard/kpi-finance-inventory-variety-panel"
+import { KpiFinanceProfitabilityVarietyPanel } from "@/components/kpi-dashboard/kpi-finance-profitability-variety-panel"
 import { KpiMfgCostPerTonneVarietyPanel } from "@/components/kpi-dashboard/kpi-mfg-cost-per-tonne-variety-panel"
 import { KpiMfgProcessingEfficiencyVarietyPanel } from "@/components/kpi-dashboard/kpi-mfg-processing-efficiency-variety-panel"
 import { KpiSalesRevenueMonthlyPanel } from "@/components/kpi-dashboard/kpi-sales-revenue-monthly-panel"
@@ -33,6 +34,8 @@ import {
   isAgronomyVarietyTableMetric,
   type AgronomyVarietyData,
 } from "@/lib/kpi-dashboard/agronomy-metrics"
+import { KpiHrHeadcountDepartmentPanel } from "@/components/kpi-dashboard/kpi-hr-headcount-department-panel"
+import type { HrHeadcountDepartmentKey } from "@/lib/kpi-dashboard/hr-headcount-departments"
 
 const statusColors: Record<MetricStatus, string> = {
   green: "bg-[oklch(0.6_0.15_145)] text-white",
@@ -54,7 +57,9 @@ export function KpiMetricDetail({
   mfgCostPerTonneByVariety,
   mfgProcessingEfficiencyByVariety,
   financeInventoryByVariety,
+  financeProfitabilityByVariety,
   agronomyByVariety,
+  hrHeadcountByDepartment,
   reportingYear,
 }: {
   segmentId: string
@@ -70,7 +75,9 @@ export function KpiMetricDetail({
   mfgCostPerTonneByVariety?: Record<string, { cost: number; target: number }>
   mfgProcessingEfficiencyByVariety?: Record<string, { actual: number; target: number }>
   financeInventoryByVariety?: Record<string, number>
+  financeProfitabilityByVariety?: Record<string, number>
   agronomyByVariety?: Record<string, AgronomyVarietyData>
+  hrHeadcountByDepartment?: Record<HrHeadcountDepartmentKey, number>
   reportingYear?: number
 }) {
   const router = useRouter()
@@ -180,6 +187,17 @@ export function KpiMetricDetail({
                       <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{metric.details}</p>
                     )}
                   </div>
+                ) : metricId === "fin-profitability" && segmentId === "finance" ? (
+                  <div className="col-span-2">
+                    <p className="text-sm text-muted-foreground">Highest profitability (by variety)</p>
+                    <p className="text-3xl font-bold text-foreground">{metric.value}</p>
+                    {metric.unit && (
+                      <p className="mt-1 text-lg font-medium text-muted-foreground">{metric.unit}</p>
+                    )}
+                    {metric.details && (
+                      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{metric.details}</p>
+                    )}
+                  </div>
                 ) : metricId === "mfg-cost-per-tonne" && segmentId === "operations-manufacturing" ? (
                   <div className="col-span-2">
                     <p className="text-sm text-muted-foreground">Highest actual cost per tonne (among varieties)</p>
@@ -192,6 +210,17 @@ export function KpiMetricDetail({
                   <div className="col-span-2">
                     <p className="text-sm text-muted-foreground">Lowest actual processing efficiency (among varieties)</p>
                     <p className="text-3xl font-bold text-foreground">{metric.value}</p>
+                    {metric.details && (
+                      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{metric.details}</p>
+                    )}
+                  </div>
+                ) : metricId === "hr-headcount" && segmentId === "hr" ? (
+                  <div className="col-span-2">
+                    <p className="text-sm text-muted-foreground">Total employees (sum by department)</p>
+                    <p className="text-3xl font-bold text-foreground">{metric.value}</p>
+                    {metric.unit && (
+                      <p className="mt-1 text-lg font-medium text-muted-foreground">{metric.unit}</p>
+                    )}
                     {metric.details && (
                       <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{metric.details}</p>
                     )}
@@ -209,8 +238,10 @@ export function KpiMetricDetail({
                 )}
                 {!(
                   (metricId === "fin-inventory-levels" && segmentId === "finance") ||
+                  (metricId === "fin-profitability" && segmentId === "finance") ||
                   (metricId === "mfg-cost-per-tonne" && segmentId === "operations-manufacturing") ||
-                  (metricId === "mfg-efficiency" && segmentId === "operations-manufacturing")
+                  (metricId === "mfg-efficiency" && segmentId === "operations-manufacturing") ||
+                  (metricId === "hr-headcount" && segmentId === "hr")
                 ) &&
                   metric.target != null && (
                   <div>
@@ -235,8 +266,10 @@ export function KpiMetricDetail({
               )}
               {metric.details &&
                 !(metricId === "fin-inventory-levels" && segmentId === "finance") &&
+                !(metricId === "fin-profitability" && segmentId === "finance") &&
                 !(metricId === "mfg-cost-per-tonne" && segmentId === "operations-manufacturing") &&
-                !(metricId === "mfg-efficiency" && segmentId === "operations-manufacturing") && (
+                !(metricId === "mfg-efficiency" && segmentId === "operations-manufacturing") &&
+                !(metricId === "hr-headcount" && segmentId === "hr") && (
                   <div>
                     <p className="text-sm text-muted-foreground">Additional details</p>
                     <p className="text-foreground">{metric.details}</p>
@@ -417,6 +450,17 @@ export function KpiMetricDetail({
               />
             )}
 
+          {metricId === "fin-profitability" &&
+            segmentId === "finance" &&
+            financeProfitabilityByVariety != null && (
+              <KpiFinanceProfitabilityVarietyPanel
+                segmentId={segmentId}
+                initialByVariety={financeProfitabilityByVariety}
+                canEdit={canEditDepartmentMetrics}
+                onSaved={refresh}
+              />
+            )}
+
           {segmentId === "operations-agronomy" &&
             isAgronomyVarietyTableMetric(metricId) &&
             agronomyByVariety != null && (
@@ -424,6 +468,17 @@ export function KpiMetricDetail({
                 segmentId={segmentId}
                 metricId={metricId}
                 initialByVariety={agronomyByVariety}
+                canEdit={canEditDepartmentMetrics}
+                onSaved={refresh}
+              />
+            )}
+
+          {metricId === "hr-headcount" &&
+            segmentId === "hr" &&
+            hrHeadcountByDepartment != null && (
+              <KpiHrHeadcountDepartmentPanel
+                segmentId={segmentId}
+                initialByDepartment={hrHeadcountByDepartment}
                 canEdit={canEditDepartmentMetrics}
                 onSaved={refresh}
               />

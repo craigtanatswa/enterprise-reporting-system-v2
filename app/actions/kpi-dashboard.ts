@@ -19,8 +19,10 @@ import {
   normalizeWeatherRiskLevel,
   type AgronomyVarietyDbRow,
 } from "@/lib/kpi-dashboard/agronomy-metrics"
+import { isHrHeadcountDepartmentKey } from "@/lib/kpi-dashboard/hr-headcount-departments"
 
 const MFG_SEGMENT = "operations-manufacturing"
+const HR_KPI_SEGMENT = "hr"
 
 function findSeedMetric(segmentId: string, metricId: string) {
   const dept = initialDepartments.find((d) => d.id === segmentId)
@@ -745,6 +747,106 @@ export async function upsertFinanceInventoryVarietyAction(input: {
   if (error) return { ok: false as const, error: error.message }
 
   revalidateKpiMetricRoutes(input.segmentId, "fin-inventory-levels")
+  return { ok: true as const }
+}
+
+export async function upsertFinanceProfitabilityVarietyAction(input: {
+  segmentId: string
+  varietyId: string
+  profitabilityPercent: number
+}) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { ok: false as const, error: "Unauthorized" }
+
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+  if (!profile?.is_active) return { ok: false as const, error: "Inactive" }
+
+  const role = profile.role as UserRole
+  const dept = profile.department as Department | null
+  const sub = profile.sub_department as SubDepartment | null
+
+  if (!userMayUpdateSegment(role, dept, sub, input.segmentId)) {
+    return { ok: false as const, error: "Forbidden" }
+  }
+
+  if (!SALES_PRODUCT_VARIETIES.some((v) => v.id === input.varietyId)) {
+    return { ok: false as const, error: "Unknown variety" }
+  }
+
+  const pct = Number(input.profitabilityPercent)
+  if (Number.isNaN(pct) || pct < 0 || pct > 100) {
+    return { ok: false as const, error: "Profitability must be between 0 and 100" }
+  }
+
+  const { error } = await supabase.from("kpi_finance_profitability_by_variety").upsert(
+    {
+      segment_id: input.segmentId,
+      variety_id: input.varietyId,
+      profitability_percent: pct,
+      updated_at: new Date().toISOString(),
+      updated_by: user.id,
+    },
+    { onConflict: "segment_id,variety_id" }
+  )
+
+  if (error) return { ok: false as const, error: error.message }
+
+  revalidateKpiMetricRoutes(input.segmentId, "fin-profitability")
+  return { ok: true as const }
+}
+
+export async function upsertHrHeadcountDepartmentAction(input: {
+  segmentId: string
+  departmentKey: string
+  headcount: number
+}) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { ok: false as const, error: "Unauthorized" }
+
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+  if (!profile?.is_active) return { ok: false as const, error: "Inactive" }
+
+  const role = profile.role as UserRole
+  const dept = profile.department as Department | null
+  const sub = profile.sub_department as SubDepartment | null
+
+  if (!userMayUpdateSegment(role, dept, sub, input.segmentId)) {
+    return { ok: false as const, error: "Forbidden" }
+  }
+
+  if (input.segmentId !== HR_KPI_SEGMENT) {
+    return { ok: false as const, error: "Invalid segment" }
+  }
+
+  if (!isHrHeadcountDepartmentKey(input.departmentKey)) {
+    return { ok: false as const, error: "Invalid department" }
+  }
+
+  const n = Number(input.headcount)
+  if (Number.isNaN(n) || n < 0 || !Number.isInteger(n)) {
+    return { ok: false as const, error: "Headcount must be a whole number ≥ 0" }
+  }
+
+  const { error } = await supabase.from("kpi_hr_headcount_by_department").upsert(
+    {
+      segment_id: input.segmentId,
+      department_key: input.departmentKey,
+      headcount: n,
+      updated_at: new Date().toISOString(),
+      updated_by: user.id,
+    },
+    { onConflict: "segment_id,department_key" }
+  )
+
+  if (error) return { ok: false as const, error: error.message }
+
+  revalidateKpiMetricRoutes(input.segmentId, "hr-headcount")
   return { ok: true as const }
 }
 

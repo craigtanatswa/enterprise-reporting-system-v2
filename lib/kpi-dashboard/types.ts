@@ -23,6 +23,8 @@ export interface MetricData {
   chart?: {
     points: { label: string; value: number }[]
   }
+  /** Optional breakdown rows (e.g. headcount by department); headline `value` should match their sum when used */
+  breakdown?: { label: string; value: number }[]
 }
 
 export interface DepartmentData {

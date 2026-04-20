@@ -7,6 +7,11 @@ import {
   type AgronomyVarietyData,
   type AgronomyVarietyDbRow,
 } from "@/lib/kpi-dashboard/agronomy-metrics"
+import {
+  DEFAULT_HR_HEADCOUNT_BY_DEPT,
+  type HrHeadcountDepartmentKey,
+} from "@/lib/kpi-dashboard/hr-headcount-departments"
+import { hrHeadcountRowsToRecord, type HrHeadcountDbRow } from "@/lib/kpi-dashboard/hr-headcount-metrics"
 import { SALES_PRODUCT_VARIETIES } from "@/lib/kpi-dashboard/product-varieties"
 import type { Department, SubDepartment } from "@/lib/utils/permissions"
 import type { UserRole } from "@/lib/utils/permissions"
@@ -65,8 +70,10 @@ export default async function KpiMetricPage({
     | Record<string, { actual: number; target: number }>
     | undefined
   let financeInventoryByVariety: Record<string, number> | undefined
+  let financeProfitabilityByVariety: Record<string, number> | undefined
   let agronomyByVariety: Record<string, AgronomyVarietyData> | undefined
   let mfgTonnesTargetsByVariety: Record<string, number> | undefined
+  let hrHeadcountByDepartment: Record<HrHeadcountDepartmentKey, number> | undefined
 
   if (
     segment === "operations-manufacturing" &&
@@ -247,6 +254,29 @@ export default async function KpiMetricPage({
     }
   }
 
+  if (segment === "finance" && metricId === "fin-profitability") {
+    financeProfitabilityByVariety = {}
+    const { data } = await supabase
+      .from("kpi_finance_profitability_by_variety")
+      .select("variety_id, profitability_percent")
+      .eq("segment_id", segment)
+    for (const row of data ?? []) {
+      financeProfitabilityByVariety[row.variety_id as string] = Number(row.profitability_percent)
+    }
+  }
+
+  if (segment === "hr" && metricId === "hr-headcount") {
+    const { data } = await supabase
+      .from("kpi_hr_headcount_by_department")
+      .select("department_key, headcount")
+      .eq("segment_id", segment)
+    if (data != null && data.length > 0) {
+      hrHeadcountByDepartment = hrHeadcountRowsToRecord(data as HrHeadcountDbRow[])
+    } else {
+      hrHeadcountByDepartment = { ...DEFAULT_HR_HEADCOUNT_BY_DEPT }
+    }
+  }
+
   return (
     <KpiMetricDetail
       segmentId={segment}
@@ -275,7 +305,9 @@ export default async function KpiMetricPage({
       mfgCostPerTonneByVariety={mfgCostPerTonneByVariety}
       mfgProcessingEfficiencyByVariety={mfgProcessingEfficiencyByVariety}
       financeInventoryByVariety={financeInventoryByVariety}
+      financeProfitabilityByVariety={financeProfitabilityByVariety}
       agronomyByVariety={agronomyByVariety}
+      hrHeadcountByDepartment={hrHeadcountByDepartment}
     />
   )
 }

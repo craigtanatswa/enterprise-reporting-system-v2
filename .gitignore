@@ -26,5 +26,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# sql files
+/scripts/
+
 #dashboard design files
 /reporting system dashboards/

@@ -1,4 +1,5 @@
 import type { DepartmentData, MDComment } from "./types"
+import { defaultHrHeadcountBreakdown, defaultHrHeadcountTotal } from "./hr-headcount-departments"
 
 // Seed data — replace with API / database when available
 // Static timestamp for initial data (avoids hydration mismatch)
@@ -32,8 +33,8 @@ export const initialMDComments: MDComment[] = [
   {
     id: "md-comment-4",
     departmentId: "hr",
-    metricId: "hr-overtime",
-    content: "Overtime costs are too high. Please investigate and propose a staffing optimization plan.",
+    metricId: "hr-staffing",
+    content: "Staffing levels need attention in some areas. Please investigate and propose a staffing optimization plan.",
     timestamp: "2026-03-27T09:00:00.000Z",
     isRead: true,
   },
@@ -568,8 +569,9 @@ export const initialDepartments: DepartmentData[] = [
       {
         id: "fin-profitability",
         name: "Profitability by Product",
-        value: "SC 719: 38%",
-        details: "SC 719: 38% | SC 513: 32% | SC 403: 28%",
+        value: "ZS269",
+        unit: "38%",
+        details: "2nd: OPV maize ZM521 (32%) · 3rd: ZS263 (28%)",
         status: "green",
         comments: [],
         lastUpdated: STATIC_TIMESTAMP,
@@ -605,10 +607,13 @@ export const initialDepartments: DepartmentData[] = [
       {
         id: "hr-headcount",
         name: "Total Workforce Headcount",
-        value: 245,
+        value: defaultHrHeadcountTotal(),
         unit: "employees",
         status: "green",
         trend: "stable",
+        breakdown: defaultHrHeadcountBreakdown(),
+        details:
+          "Total headcount is the sum of employees reported for each department below.",
         comments: [],
         lastUpdated: STATIC_TIMESTAMP,
       },
@@ -635,28 +640,6 @@ export const initialDepartments: DepartmentData[] = [
         lastUpdated: STATIC_TIMESTAMP,
       },
       {
-        id: "hr-productivity",
-        name: "Employee Productivity",
-        value: 12.5,
-        unit: "tonnes/employee",
-        target: 14,
-        status: "amber",
-        trend: "up",
-        comments: [],
-        lastUpdated: STATIC_TIMESTAMP,
-      },
-      {
-        id: "hr-training",
-        name: "Training Hours (YTD)",
-        value: 2400,
-        unit: "hours",
-        target: 3000,
-        status: "amber",
-        trend: "up",
-        comments: [],
-        lastUpdated: STATIC_TIMESTAMP,
-      },
-      {
         id: "hr-payroll-ratio",
         name: "Payroll Costs vs Revenue",
         value: 18,
@@ -674,17 +657,6 @@ export const initialDepartments: DepartmentData[] = [
         unit: "/10",
         target: 8,
         status: "amber",
-        trend: "up",
-        comments: [],
-        lastUpdated: STATIC_TIMESTAMP,
-      },
-      {
-        id: "hr-overtime",
-        name: "Overtime Costs",
-        value: 15000,
-        unit: "USD/month",
-        target: 12000,
-        status: "red",
         trend: "up",
         comments: [],
         lastUpdated: STATIC_TIMESTAMP,

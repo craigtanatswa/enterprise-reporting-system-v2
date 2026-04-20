@@ -8,6 +8,10 @@ import {
   type FinanceInventoryRow,
 } from "@/lib/kpi-dashboard/finance-inventory-metrics"
 import {
+  deriveFinanceProfitabilityFromDbRows,
+  type FinanceProfitabilityRow,
+} from "@/lib/kpi-dashboard/finance-profitability-metrics"
+import {
   deriveAgroCropProgress,
   deriveAgroHectares,
   deriveAgroInputCostPerHa,
@@ -38,6 +42,10 @@ import {
   deriveMfgProcessingEfficiencyKpi,
   type MfgProcessingEfficiencyDbRow,
 } from "@/lib/kpi-dashboard/mfg-processing-efficiency-metrics"
+import {
+  deriveHrHeadcountFromDbRows,
+  type HrHeadcountDbRow,
+} from "@/lib/kpi-dashboard/hr-headcount-metrics"
 
 export type KpiMetricOverrideRow = {
   segment_id: string
@@ -186,7 +194,8 @@ export async function loadKpiDashboardState(supabase: SupabaseClient): Promise<{
     const financeSeg = "finance"
     const agronomySeg = "operations-agronomy"
     const mfgSeg = "operations-manufacturing"
-    const [revRes, volRes, finInvRes, agroRes, mfgRawRes, mfgProcRes, mfgPackRes, mfgDispRes, mfgFinishedRes, mfgCostRes, mfgEffRes] =
+    const hrSeg = "hr"
+    const [revRes, volRes, finInvRes, finProfitRes, agroRes, mfgRawRes, mfgProcRes, mfgPackRes, mfgDispRes, mfgFinishedRes, mfgCostRes, mfgEffRes, hrHeadRes] =
       await Promise.all([
       supabase
         .from("kpi_sales_revenue_monthly")
@@ -201,6 +210,10 @@ export async function loadKpiDashboardState(supabase: SupabaseClient): Promise<{
       supabase
         .from("kpi_finance_inventory_by_variety")
         .select("variety_id,inventory_tonnes,updated_at")
+        .eq("segment_id", financeSeg),
+      supabase
+        .from("kpi_finance_profitability_by_variety")
+        .select("variety_id,profitability_percent,updated_at")
         .eq("segment_id", financeSeg),
       supabase.from("kpi_agronomy_by_variety").select("*").eq("segment_id", agronomySeg),
       supabase
@@ -236,6 +249,10 @@ export async function loadKpiDashboardState(supabase: SupabaseClient): Promise<{
         .from("kpi_mfg_processing_efficiency_by_variety")
         .select("variety_id,efficiency_percent,target_percent,updated_at")
         .eq("segment_id", mfgSeg),
+      supabase
+        .from("kpi_hr_headcount_by_department")
+        .select("department_key,headcount,updated_at")
+        .eq("segment_id", hrSeg),
     ])
     const sm = base.find((d) => d.id === salesSeg)
     if (sm && !revRes.error && revRes.data?.length) {
@@ -265,6 +282,19 @@ export async function loadKpiDashboardState(supabase: SupabaseClient): Promise<{
     if (finDept && !finInvErr && finInvData != null && finInvData.length > 0) {
       const derived = deriveFinanceInventoryLevelsFromDbRows(finInvData as FinanceInventoryRow[])
       const m = finDept.metrics.find((x) => x.id === "fin-inventory-levels")
+      if (derived && m) {
+        m.value = derived.value
+        m.unit = derived.unit
+        m.details = derived.details
+        m.lastUpdated = derived.lastUpdated
+      }
+    }
+
+    const finProfitData = finProfitRes.data
+    const finProfitErr = finProfitRes.error
+    if (finDept && !finProfitErr && finProfitData != null && finProfitData.length > 0) {
+      const derived = deriveFinanceProfitabilityFromDbRows(finProfitData as FinanceProfitabilityRow[])
+      const m = finDept.metrics.find((x) => x.id === "fin-profitability")
       if (derived && m) {
         m.value = derived.value
         m.unit = derived.unit
@@ -474,6 +504,31 @@ export async function loadKpiDashboardState(supabase: SupabaseClient): Promise<{
         mEff.unit = undefined
         mEff.details = derived.details
         mEff.lastUpdated = derived.lastUpdated
+      }
+    }
+
+    const hrDept = base.find((d) => d.id === hrSeg)
+    const hrHeadData = hrHeadRes.data
+    if (hrDept && !hrHeadRes.error && hrHeadData != null && hrHeadData.length > 0) {
+      const rows = (hrHeadData as Record<string, unknown>[]).map((r) => ({
+        department_key: String(r.department_key),
+        headcount: Number(r.headcount),
+        updated_at: String(r.updated_at),
+      })) as HrHeadcountDbRow[]
+      const derived = deriveHrHeadcountFromDbRows(rows)
+      const mHc = hrDept.metrics.find((x) => x.id === "hr-headcount")
+      if (mHc) {
+        mHc.value = derived.total
+        mHc.unit = "employees"
+        mHc.breakdown = derived.breakdown
+        mHc.details = derived.details
+        mHc.lastUpdated = derived.lastUpdated
+      }
+    } else if (hrDept) {
+      const mHc = hrDept.metrics.find((x) => x.id === "hr-headcount")
+      if (mHc?.breakdown?.length) {
+        const total = mHc.breakdown.reduce((a, r) => a + r.value, 0)
+        mHc.value = total
       }
     }
   } catch {

@@ -93,6 +93,8 @@ export function KpiDataEntry({ segmentId }: { segmentId: string }) {
     id === "mfg-cost-per-tonne" ||
     id === "mfg-efficiency" ||
     id === "fin-inventory-levels" ||
+    id === "fin-profitability" ||
+    id === "hr-headcount" ||
     (AGRONOMY_VARIETY_TABLE_METRIC_IDS as readonly string[]).includes(id)
 
   const saveMetric = async (metricId: string) => {
@@ -193,8 +195,12 @@ export function KpiDataEntry({ segmentId }: { segmentId: string }) {
                         >
                           Open the metric page
                         </Link>{" "}
-                        {metric.id === "fin-inventory-levels"
+                        {metric.id === "fin-profitability"
+                          ? "to enter profitability (%) by variety. The headline shows the highest margin; 2nd and 3rd ranks are derived from the table."
+                          : metric.id === "fin-inventory-levels"
                           ? "to enter inventory by variety. The headline shows the largest holding; ranks 2–4 are derived from the table."
+                          : metric.id === "hr-headcount"
+                            ? "to enter headcount by department. The headline total is the sum of those figures."
                           : metric.id === "mfg-cost-per-tonne"
                             ? "to enter actual and target USD per tonne by variety. The headline shows the variety with the highest actual cost per tonne."
                             : metric.id === "mfg-efficiency"
