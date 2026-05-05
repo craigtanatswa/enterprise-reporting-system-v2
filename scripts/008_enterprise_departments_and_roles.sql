@@ -6,6 +6,7 @@
 -- Drop existing types and recreate with new structure
 DROP TYPE IF EXISTS user_role CASCADE;
 DROP TYPE IF EXISTS department_type CASCADE;
+DROP TYPE IF EXISTS sub_department_type CASCADE;
 
 -- New strict role hierarchy
 CREATE TYPE user_role AS ENUM (
@@ -63,8 +64,8 @@ CREATE TABLE public.profiles (
 );
 
 -- Create index for bootstrap admin check
-CREATE INDEX idx_profiles_role ON public.profiles(role);
-CREATE INDEX idx_profiles_department ON public.profiles(department);
+CREATE INDEX IF NOT EXISTS idx_profiles_role ON public.profiles(role);
+CREATE INDEX IF NOT EXISTS idx_profiles_department ON public.profiles(department);
 
 -- =========================================
 -- Audit Log Table
@@ -84,9 +85,9 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_audit_logs_actor ON public.audit_logs(actor_id);
-CREATE INDEX idx_audit_logs_entity ON public.audit_logs(entity_type, entity_id);
-CREATE INDEX idx_audit_logs_created ON public.audit_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_actor ON public.audit_logs(actor_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON public.audit_logs(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON public.audit_logs(created_at DESC);
 
 -- =========================================
 -- Admin Invitations Table
@@ -105,8 +106,8 @@ CREATE TABLE IF NOT EXISTS public.admin_invitations (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_invitations_token ON public.admin_invitations(token);
-CREATE INDEX idx_invitations_email ON public.admin_invitations(email);
+CREATE INDEX IF NOT EXISTS idx_invitations_token ON public.admin_invitations(token);
+CREATE INDEX IF NOT EXISTS idx_invitations_email ON public.admin_invitations(email);
 
 -- =========================================
 -- Updated Departments Table
@@ -131,7 +132,7 @@ INSERT INTO public.departments (name, display_name, description) VALUES
   ('MARKETING_AND_SALES', 'Marketing and Sales', 'Marketing campaigns and sales operations'),
   ('LEGAL_AND_COMPLIANCE', 'Legal & Compliance', 'Legal affairs and regulatory compliance'),
   ('HUMAN_RESOURCES_AND_ADMINISTRATION', 'Human Resources & Administration', 'HR and administrative functions'),
-  ('PROPERTIES_MANAGEMENT', 'Properties Management', 'Real estate and property management'),
+  ('PROPERTIES_MANAGEMENT', 'Administration and Properties Department', 'Administration, estates, and property portfolio'),
   ('ICT_AND_DIGITAL_TRANSFORMATION', 'ICT & Digital Transformation', 'Information technology and digital initiatives'),
   ('PROCUREMENT', 'Procurement', 'Purchasing and supply chain management'),
   ('PUBLIC_RELATIONS', 'Public Relations', 'External communications and public affairs')
@@ -280,7 +281,57 @@ $$;
 
 -- =========================================
 -- Updated RLS Policies for Profiles
+-- (Helpers avoid querying profiles inside policies → infinite recursion.)
 -- =========================================
+
+CREATE OR REPLACE FUNCTION public.profiles_role_for(p_user_id uuid)
+RETURNS user_role
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT role FROM public.profiles WHERE id = p_user_id LIMIT 1;
+$$;
+
+CREATE OR REPLACE FUNCTION public.profiles_user_is_privileged_reader()
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.profiles p
+    WHERE p.id = auth.uid()
+      AND p.role IN ('ADMIN', 'BOOTSTRAP_ADMIN', 'MANAGING_DIRECTOR', 'EXECUTIVE')
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.profiles_user_is_admin_updater()
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.profiles p
+    WHERE p.id = auth.uid()
+      AND p.role IN ('ADMIN', 'BOOTSTRAP_ADMIN')
+  );
+$$;
+
+REVOKE ALL ON FUNCTION public.profiles_role_for(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.profiles_role_for(uuid) TO authenticated;
+
+REVOKE ALL ON FUNCTION public.profiles_user_is_privileged_reader() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.profiles_user_is_privileged_reader() TO authenticated;
+
+REVOKE ALL ON FUNCTION public.profiles_user_is_admin_updater() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.profiles_user_is_admin_updater() TO authenticated;
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
@@ -298,44 +349,36 @@ CREATE POLICY "profiles_select_own"
 -- Admins and executives can read all profiles
 CREATE POLICY "profiles_select_admin"
   ON public.profiles FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles p
-      WHERE p.id = auth.uid()
-      AND p.role IN ('ADMIN', 'BOOTSTRAP_ADMIN', 'MANAGING_DIRECTOR', 'EXECUTIVE')
-    )
-  );
+  USING (public.profiles_user_is_privileged_reader());
 
 -- Users can insert their own profile during signup
 CREATE POLICY "profiles_insert_own"
   ON public.profiles FOR INSERT
   WITH CHECK (auth.uid() = id);
 
--- Users can update their own non-role fields
+-- Users can update their own row; role must stay unchanged (non-admins)
 CREATE POLICY "profiles_update_own"
   ON public.profiles FOR UPDATE
   USING (auth.uid() = id)
   WITH CHECK (
     auth.uid() = id
-    AND role = (SELECT role FROM public.profiles WHERE id = auth.uid())
+    AND (role IS NOT DISTINCT FROM public.profiles_role_for(auth.uid()))
   );
 
 -- Only admins can update any profile including role changes
 CREATE POLICY "profiles_update_admin"
   ON public.profiles FOR UPDATE
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles p
-      WHERE p.id = auth.uid()
-      AND p.role IN ('ADMIN', 'BOOTSTRAP_ADMIN')
-    )
-  );
+  USING (public.profiles_user_is_admin_updater())
+  WITH CHECK (public.profiles_user_is_admin_updater());
 
 -- =========================================
 -- RLS for Audit Logs
 -- =========================================
 
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "audit_logs_select_admin" ON public.audit_logs;
+DROP POLICY IF EXISTS "audit_logs_insert_system" ON public.audit_logs;
 
 -- Only admins can read audit logs
 CREATE POLICY "audit_logs_select_admin"
@@ -359,6 +402,9 @@ CREATE POLICY "audit_logs_insert_system"
 
 ALTER TABLE public.departments ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "departments_select_all" ON public.departments;
+DROP POLICY IF EXISTS "departments_modify_admin" ON public.departments;
+
 -- All authenticated users can read departments
 CREATE POLICY "departments_select_all"
   ON public.departments FOR SELECT
@@ -380,6 +426,8 @@ CREATE POLICY "departments_modify_admin"
 -- =========================================
 
 ALTER TABLE public.admin_invitations ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "invitations_admin_only" ON public.admin_invitations;
 
 -- Only admins can manage invitations
 CREATE POLICY "invitations_admin_only"

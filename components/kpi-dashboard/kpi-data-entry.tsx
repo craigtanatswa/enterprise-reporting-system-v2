@@ -19,6 +19,14 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import type { MetricStatus, MetricData } from "@/lib/kpi-dashboard/types"
+import { deriveExpenditureLimitStatus, isMaxLimitMetric } from "@/lib/kpi-dashboard/expenditure-limit"
+import { isProcurementMonthlyMetricId } from "@/lib/kpi-dashboard/procurement-monthly-metrics"
+import {
+  isProjectDeliveryMetricId,
+  parseProjectDeliveryDetails,
+  serializeProjectDeliveryDetails,
+} from "@/lib/kpi-dashboard/project-delivery-metric"
+import { KpiProjectDeliverySections } from "@/components/kpi-dashboard/kpi-project-delivery-sections"
 import { useKpiDashboard } from "@/components/kpi-dashboard/kpi-dashboard-provider"
 import { addKpiDepartmentCommentAction, updateKpiMetricAction } from "@/app/actions/kpi-dashboard"
 import { AGRONOMY_VARIETY_TABLE_METRIC_IDS } from "@/lib/kpi-dashboard/agronomy-metrics"
@@ -82,6 +90,15 @@ export function KpiDataEntry({ segmentId }: { segmentId: string }) {
     }))
   }
 
+  const effectiveStatusForMetric = (metric: MetricData, fd: MetricFormData): MetricStatus => {
+    if (!isMaxLimitMetric(metric) || metric.target == null) return fd.status
+    const v = parseFloat(String(fd.value).trim())
+    if (!Number.isFinite(v)) return fd.status
+    return deriveExpenditureLimitStatus(v, metric.target)
+  }
+
+  const usesProjectDeliveryStructure = (id: string) => isProjectDeliveryMetricId(id)
+
   const usesMonthlyBreakdown = (id: string) =>
     id === "sales-revenue" ||
     id === "sales-volume-variety" ||
@@ -95,6 +112,7 @@ export function KpiDataEntry({ segmentId }: { segmentId: string }) {
     id === "fin-inventory-levels" ||
     id === "fin-profitability" ||
     id === "hr-headcount" ||
+    isProcurementMonthlyMetricId(id) ||
     (AGRONOMY_VARIETY_TABLE_METRIC_IDS as readonly string[]).includes(id)
 
   const saveMetric = async (metricId: string) => {
@@ -109,7 +127,13 @@ export function KpiDataEntry({ segmentId }: { segmentId: string }) {
       value: skipHeadlineFields ? String(metric.value) : data.value,
       status: data.status,
       trend: data.trend,
-      details: skipHeadlineFields ? (metric.details ?? "") : data.details,
+      details: skipHeadlineFields
+        ? (metric.details ?? "")
+        : usesProjectDeliveryStructure(metricId)
+          ? serializeProjectDeliveryDetails(
+              parseProjectDeliveryDetails(data.details, metric.details ?? undefined)
+            )
+          : data.details,
     })
     if (data.comment.trim()) {
       await addKpiDepartmentCommentAction({
@@ -140,7 +164,13 @@ export function KpiDataEntry({ segmentId }: { segmentId: string }) {
         value: skipHeadlineFields ? String(m.value) : data.value,
         status: data.status,
         trend: data.trend,
-        details: skipHeadlineFields ? (m.details ?? "") : data.details,
+        details: skipHeadlineFields
+          ? (m.details ?? "")
+          : usesProjectDeliveryStructure(m.id)
+            ? serializeProjectDeliveryDetails(
+                parseProjectDeliveryDetails(data.details, m.details ?? undefined)
+              )
+            : data.details,
       })
       if (data.comment.trim()) {
         await addKpiDepartmentCommentAction({
@@ -177,6 +207,7 @@ export function KpiDataEntry({ segmentId }: { segmentId: string }) {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {department.metrics.map((metric) => {
           const data = initForm(metric)
+          const displayStatus = effectiveStatusForMetric(metric, data)
           return (
             <Card key={metric.id}>
               <CardHeader>
@@ -187,6 +218,12 @@ export function KpiDataEntry({ segmentId }: { segmentId: string }) {
                       Current: {metric.value}
                       {metric.unit ? ` ${metric.unit}` : ""}
                     </CardDescription>
+                    {usesProjectDeliveryStructure(metric.id) && (
+                      <CardDescription className="pt-2 text-foreground">
+                        Enter the headline % on schedule, status, and trend here; use the sections below for
+                        portfolio, timelines, budgets, issues, and contractors (shown on the metric detail page).
+                      </CardDescription>
+                    )}
                     {usesMonthlyBreakdown(metric.id) && (
                       <CardDescription className="pt-2 text-foreground">
                         <Link
@@ -213,14 +250,16 @@ export function KpiDataEntry({ segmentId }: { segmentId: string }) {
                               ? "to enter closing tonnes by month and annual plan on the metric page. Progress compares closing actual to the annual plan."
                             : metric.id === "mfg-dispatch"
                               ? "to enter tonnes per variety by month. The headline shows total year-to-date tonnes (all varieties) through the current month."
+                              : isProcurementMonthlyMetricId(metric.id)
+                                ? "to enter month-by-month figures. The headline value is the year-to-date sum of those entries."
                               : (AGRONOMY_VARIETY_TABLE_METRIC_IDS as readonly string[]).includes(metric.id)
                                 ? "to enter figures by seed variety. The headline value is calculated from those rows."
                                 : "to enter month-by-month figures. The headline value is calculated from those entries."}
                       </CardDescription>
                     )}
                   </div>
-                  <Badge className={cn("text-xs", statusColors[data.status])}>
-                    {data.status.charAt(0).toUpperCase() + data.status.slice(1)}
+                  <Badge className={cn("text-xs", statusColors[displayStatus])}>
+                    {displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1)}
                   </Badge>
                 </div>
               </CardHeader>
@@ -240,6 +279,7 @@ export function KpiDataEntry({ segmentId }: { segmentId: string }) {
                     <Select
                       value={data.status}
                       onValueChange={(v: MetricStatus) => patchForm(metric.id, { status: v })}
+                      disabled={isMaxLimitMetric(metric)}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -250,6 +290,11 @@ export function KpiDataEntry({ segmentId }: { segmentId: string }) {
                         <SelectItem value="red">Red — critical</SelectItem>
                       </SelectContent>
                     </Select>
+                    {isMaxLimitMetric(metric) && (
+                      <p className="text-xs text-muted-foreground">
+                        Red when actual spend exceeds the maximum limit; green when within the limit.
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -268,15 +313,24 @@ export function KpiDataEntry({ segmentId }: { segmentId: string }) {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label>Additional details</Label>
-                  <Input
-                    value={data.details}
-                    onChange={(e) => patchForm(metric.id, { details: e.target.value })}
-                    placeholder="Optional"
-                    disabled={usesMonthlyBreakdown(metric.id)}
+                {usesProjectDeliveryStructure(metric.id) ? (
+                  <KpiProjectDeliverySections
+                    data={parseProjectDeliveryDetails(data.details, metric.details ?? undefined)}
+                    onChange={(next) =>
+                      patchForm(metric.id, { details: serializeProjectDeliveryDetails(next) })
+                    }
                   />
-                </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label>Additional details</Label>
+                    <Input
+                      value={data.details}
+                      onChange={(e) => patchForm(metric.id, { details: e.target.value })}
+                      placeholder="Optional"
+                      disabled={usesMonthlyBreakdown(metric.id)}
+                    />
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label className="flex items-center gap-1">
                     <MessageSquare className="size-4" />

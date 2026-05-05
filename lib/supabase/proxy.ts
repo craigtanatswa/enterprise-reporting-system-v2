@@ -43,9 +43,30 @@ export async function updateSession(request: NextRequest) {
 
   // IMPORTANT: If you remove getUser() and you use server-side rendering
   // with the Supabase client, your users may be randomly logged out.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  let user: Awaited<ReturnType<typeof supabase.auth.getUser>>["data"]["user"] = null
+  try {
+    const { data, error } = await supabase.auth.getUser()
+    if (error) {
+      const staleSession =
+        error.code === "refresh_token_not_found" ||
+        (typeof error.message === "string" &&
+          (error.message.includes("Invalid Refresh Token") ||
+            error.message.includes("Refresh Token Not Found")))
+      if (staleSession) {
+        await supabase.auth.signOut()
+      }
+      user = staleSession ? null : (data.user ?? null)
+    } else {
+      user = data.user ?? null
+    }
+  } catch {
+    try {
+      await supabase.auth.signOut()
+    } catch {
+      /* ignore */
+    }
+    user = null
+  }
 
   // Redirect unauthenticated users from protected routes
   if (request.nextUrl.pathname.startsWith("/dashboard") && !user) {

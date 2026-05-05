@@ -16,5 +16,5 @@ export default async function PropertiesGuidelinesPage() {
     redirect("/dashboard")
   }
 
-  return <DepartmentGuidelinesPage departmentLabel="Properties & Administration" />
+  return <DepartmentGuidelinesPage departmentLabel="Administration and Properties Department" />
 }

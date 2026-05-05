@@ -5,6 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import type { MetricData, MetricStatus } from "@/lib/kpi-dashboard/types"
+import { deriveExpenditureLimitStatus, isMaxLimitMetric } from "@/lib/kpi-dashboard/expenditure-limit"
+import {
+  isProjectDeliveryMetricId,
+  parseProjectDeliveryDetails,
+} from "@/lib/kpi-dashboard/project-delivery-metric"
 
 interface MetricCardProps {
   metric: MetricData
@@ -44,8 +49,17 @@ export function KpiMetricCard({
   showCommentIndicator = true,
   className,
 }: MetricCardProps) {
-  const status = metric.status || "green"
+  const status: MetricStatus =
+    isMaxLimitMetric(metric) &&
+    metric.target != null &&
+    typeof metric.value === "number" &&
+    !Number.isNaN(metric.value)
+      ? deriveExpenditureLimitStatus(metric.value, metric.target)
+      : metric.status || "green"
   const hasComments = metric.comments.length > 0
+  const projectDelivery = isProjectDeliveryMetricId(metric.id)
+    ? parseProjectDeliveryDetails(metric.details)
+    : null
 
   return (
     <Card
@@ -77,12 +91,22 @@ export function KpiMetricCard({
         <div className="flex items-end justify-between">
           <div>
             <p className="text-2xl font-bold text-foreground">{formatValue(metric.value, metric.unit)}</p>
-            {metric.target && typeof metric.value === "number" && (
+            {projectDelivery?.scheduleLabel.trim() && (
+              <p className="text-xs font-medium text-muted-foreground mt-0.5">{projectDelivery.scheduleLabel}</p>
+            )}
+            {metric.target != null && metric.target > 0 && typeof metric.value === "number" && (
               <p className="text-xs text-muted-foreground mt-1">
-                Target: {formatValue(metric.target, metric.unit)} ({Math.round((metric.value / metric.target) * 100)}%)
+                {isMaxLimitMetric(metric) ? "Maximum limit" : "Target"}: {formatValue(metric.target, metric.unit)} (
+                {Math.round((metric.value / metric.target) * 100)}%
+                {isMaxLimitMetric(metric) ? " of limit" : ""})
               </p>
             )}
-            {metric.details && (
+            {projectDelivery?.projectsSummary.trim() && (
+              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                Projects: {projectDelivery.projectsSummary}
+              </p>
+            )}
+            {metric.details && !isProjectDeliveryMetricId(metric.id) && (
               <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{metric.details}</p>
             )}
           </div>

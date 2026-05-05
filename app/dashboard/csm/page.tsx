@@ -23,7 +23,7 @@ export default async function CSMDashboardPage() {
   return (
     <SupervisorReportsPage
       title="Corporate Services Manager Dashboard"
-      description="Reports from Marketing, Legal, HR, Properties, and ICT"
+      description="Reports from Marketing, Legal, HR, Administration and Properties, and ICT"
       departmentFilter={CSM_DEPARTMENTS}
     />
   )

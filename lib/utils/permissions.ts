@@ -174,7 +174,7 @@ export function getDepartmentLabel(department: Department): string {
     MARKETING_AND_SALES: "Marketing and Sales",
     LEGAL_AND_COMPLIANCE: "Legal & Compliance",
     HUMAN_RESOURCES_AND_ADMINISTRATION: "Human Resources & Administration",
-    PROPERTIES_MANAGEMENT: "Properties Management",
+    PROPERTIES_MANAGEMENT: "Administration and Properties Department",
     ICT_AND_DIGITAL_TRANSFORMATION: "ICT & Digital Transformation",
     PROCUREMENT: "Procurement",
     PUBLIC_RELATIONS: "Public Relations",

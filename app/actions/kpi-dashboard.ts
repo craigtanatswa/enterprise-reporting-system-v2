@@ -10,6 +10,7 @@ import {
 import type { Department, SubDepartment } from "@/lib/utils/permissions"
 import type { UserRole } from "@/lib/utils/permissions"
 import type { MetricStatus } from "@/lib/kpi-dashboard/types"
+import { deriveExpenditureLimitStatus } from "@/lib/kpi-dashboard/expenditure-limit"
 import { applyMetricOverride, type KpiMetricOverrideRow } from "@/lib/kpi-dashboard/merge-server"
 import { initialDepartments } from "@/lib/kpi-dashboard/initial-data"
 import { SALES_PRODUCT_VARIETIES } from "@/lib/kpi-dashboard/product-varieties"
@@ -20,6 +21,7 @@ import {
   type AgronomyVarietyDbRow,
 } from "@/lib/kpi-dashboard/agronomy-metrics"
 import { isHrHeadcountDepartmentKey } from "@/lib/kpi-dashboard/hr-headcount-departments"
+import { isProcurementMonthlyMetricId } from "@/lib/kpi-dashboard/procurement-monthly-metrics"
 
 const MFG_SEGMENT = "operations-manufacturing"
 const HR_KPI_SEGMENT = "hr"
@@ -79,6 +81,15 @@ export async function updateKpiMetricAction(input: {
   const prevNum = typeof current.value === "number" ? current.value : null
   const prevText = typeof current.value === "string" ? current.value : null
 
+  let statusToSave: MetricStatus = input.status
+  if (
+    seed.comparison === "maxLimit" &&
+    valueNumeric !== null &&
+    seed.target != null
+  ) {
+    statusToSave = deriveExpenditureLimitStatus(valueNumeric, seed.target)
+  }
+
   const { error } = await supabase.from("kpi_metric_overrides").upsert(
     {
       segment_id: input.segmentId,
@@ -86,7 +97,7 @@ export async function updateKpiMetricAction(input: {
       value_numeric: valueNumeric,
       value_text: valueText,
       details: input.details || null,
-      status: input.status,
+      status: statusToSave,
       trend: input.trend,
       previous_numeric: prevNum,
       previous_text: prevText,
@@ -158,6 +169,66 @@ export async function upsertSalesRevenueMonthAction(input: {
   if (error) return { ok: false as const, error: error.message }
 
   revalidateKpiMetricRoutes(input.segmentId, "sales-revenue")
+  return { ok: true as const }
+}
+
+export async function upsertProcurementMetricMonthAction(input: {
+  segmentId: string
+  year: number
+  month: number
+  metricId: string
+  valueAmount: number
+}) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { ok: false as const, error: "Unauthorized" }
+
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+  if (!profile?.is_active) return { ok: false as const, error: "Inactive" }
+
+  const role = profile.role as UserRole
+  const dept = profile.department as Department | null
+  const sub = profile.sub_department as SubDepartment | null
+
+  if (!userMayUpdateSegment(role, dept, sub, input.segmentId)) {
+    return { ok: false as const, error: "Forbidden" }
+  }
+
+  if (input.segmentId !== "procurement") {
+    return { ok: false as const, error: "Invalid segment" }
+  }
+
+  if (!isProcurementMonthlyMetricId(input.metricId)) {
+    return { ok: false as const, error: "Invalid metric" }
+  }
+
+  if (input.month < 1 || input.month > 12) {
+    return { ok: false as const, error: "Invalid month" }
+  }
+
+  const amount = Number(input.valueAmount)
+  if (Number.isNaN(amount) || amount < 0) {
+    return { ok: false as const, error: "Invalid value" }
+  }
+
+  const { error } = await supabase.from("kpi_procurement_metric_monthly").upsert(
+    {
+      segment_id: input.segmentId,
+      year: input.year,
+      month: input.month,
+      metric_id: input.metricId,
+      value_amount: amount,
+      updated_at: new Date().toISOString(),
+      updated_by: user.id,
+    },
+    { onConflict: "segment_id,year,month,metric_id" }
+  )
+
+  if (error) return { ok: false as const, error: error.message }
+
+  revalidateKpiMetricRoutes(input.segmentId, input.metricId)
   return { ok: true as const }
 }
 

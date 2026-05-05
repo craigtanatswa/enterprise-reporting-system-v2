@@ -1,9 +1,41 @@
 import type { DepartmentData, MDComment } from "./types"
 import { defaultHrHeadcountBreakdown, defaultHrHeadcountTotal } from "./hr-headcount-departments"
+import {
+  defaultProjectDeliverySeed,
+  serializeProjectDeliveryDetails,
+} from "./project-delivery-metric"
 
 // Seed data — replace with API / database when available
 // Static timestamp for initial data (avoids hydration mismatch)
-const STATIC_TIMESTAMP = "2026-03-30T09:00:00.000Z";
+const STATIC_TIMESTAMP = "2026-03-30T09:00:00.000Z"
+
+const propProjectDeliverySeed = serializeProjectDeliveryDetails(
+  defaultProjectDeliverySeed({
+    scheduleLabel: "on schedule",
+    projectsSummary: "2 of 5 delayed",
+    portfolio: `Warehouse roof replacement — Delayed\nOffice refurbishment Phase 1 — On track\nPerimeter fencing — Completed\nWater reticulation upgrade — Delayed\nGenerator bay civil works — On track`,
+    timeline:
+      "Roof programme: June milestone missed (+3 weeks vs plan). Fencing completed two weeks ahead of contractual date.",
+    budget: "Roof +5% over YTD plan | Refurbishment on plan | Fencing 4% favourable to budget | Water project within tolerances",
+    issues: "Roof: supplier material lead time; Water reticulation: borehole pump shipment deferred by vendor",
+    contractors:
+      "Roofing contractor: recurring late deliveries flagged in weekly site meetings | Civil firm A: strong milestone adherence",
+  })
+)
+
+const ictProjectDeliverySeed = serializeProjectDeliveryDetails(
+  defaultProjectDeliverySeed({
+    scheduleLabel: "on schedule",
+    projectsSummary: "2 of 5 delayed",
+    portfolio: `ERP Phase 2 — Delayed\nMobile field app — On track\nData analytics platform — On track\nNetwork core refresh — Delayed\nIdentity migration (Entra) — Completed`,
+    timeline:
+      "ERP: design gate slipped 2 weeks vs baseline. Network refresh: staging windows aligned with factory blackout calendar.",
+    budget: "ERP 8% below YTD committed envelope | App build on plan | Core refresh spend tracking to cap",
+    issues: "ERP: contention on integration-test environments; Core refresh: two change windows deferred by operations",
+    contractors:
+      "ERP integrator: mixed milestone delivery | Infrastructure partner: strong execution on cabling and switching",
+  })
+)
 
 // Initial MD Comments (sample data)
 export const initialMDComments: MDComment[] = [
@@ -110,16 +142,6 @@ export const initialDepartments: DepartmentData[] = [
         target: 95,
         status: "amber",
         trend: "up",
-        comments: [],
-        lastUpdated: STATIC_TIMESTAMP,
-      },
-      {
-        id: "exec-inventory-value",
-        name: "Inventory Value",
-        value: 450000,
-        unit: "USD",
-        status: "green",
-        trend: "stable",
         comments: [],
         lastUpdated: STATIC_TIMESTAMP,
       },
@@ -685,6 +707,7 @@ export const initialDepartments: DepartmentData[] = [
         value: 180000,
         unit: "USD",
         target: 200000,
+        comparison: "maxLimit",
         status: "green",
         trend: "stable",
         comments: [],
@@ -696,7 +719,8 @@ export const initialDepartments: DepartmentData[] = [
         value: 520000,
         unit: "USD",
         target: 500000,
-        status: "amber",
+        comparison: "maxLimit",
+        status: "red",
         trend: "up",
         comments: [],
         lastUpdated: STATIC_TIMESTAMP,
@@ -707,6 +731,7 @@ export const initialDepartments: DepartmentData[] = [
         value: 700000,
         unit: "USD",
         target: 700000,
+        comparison: "maxLimit",
         status: "green",
         trend: "stable",
         comments: [],
@@ -823,92 +848,12 @@ export const initialDepartments: DepartmentData[] = [
       },
       {
         id: "ict-projects",
-        name: "Project Progress",
+        name: "Project Delivery Performance (%)",
         value: 68,
         unit: "%",
-        target: 75,
-        status: "amber",
-        details: "ERP Phase 2: 72% | Mobile App: 65% | Data Analytics: 68%",
-        comments: [],
-        lastUpdated: STATIC_TIMESTAMP,
-      },
-    ],
-  },
-  {
-    id: "inventory",
-    name: "Inventory / Warehouse",
-    shortName: "Inventory",
-    icon: "Warehouse",
-    head: "Warehouse Manager",
-    metrics: [
-      {
-        id: "inv-stock-levels",
-        name: "Current Stock Levels",
-        value: 2800,
-        unit: "tonnes",
-        status: "green",
-        details: "SC 719: 1200t | SC 513: 900t | SC 403: 500t | Others: 200t",
-        comments: [],
-        lastUpdated: STATIC_TIMESTAMP,
-      },
-      {
-        id: "inv-stock-value",
-        name: "Stock Value",
-        value: 450000,
-        unit: "USD",
-        status: "green",
+        status: "red",
         trend: "stable",
-        comments: [],
-        lastUpdated: STATIC_TIMESTAMP,
-      },
-      {
-        id: "inv-movement",
-        name: "Stock Movement (Monthly)",
-        value: "In: 850t / Out: 780t",
-        status: "green",
-        trend: "up",
-        comments: [],
-        lastUpdated: STATIC_TIMESTAMP,
-      },
-      {
-        id: "inv-slow-moving",
-        name: "Slow-moving / Dead Stock",
-        value: 120,
-        unit: "tonnes",
-        status: "amber",
-        trend: "down",
-        details: "SC 301 (discontinued): 80t | Damaged stock: 40t",
-        comments: [],
-        lastUpdated: STATIC_TIMESTAMP,
-      },
-      {
-        id: "inv-capacity",
-        name: "Storage Capacity Utilization",
-        value: 72,
-        unit: "%",
-        target: 80,
-        status: "green",
-        trend: "stable",
-        comments: [],
-        lastUpdated: STATIC_TIMESTAMP,
-      },
-      {
-        id: "inv-expiry-risk",
-        name: "Expiry Risk",
-        value: "Low",
-        status: "green",
-        details: "No stock expiring within 6 months",
-        comments: [],
-        lastUpdated: STATIC_TIMESTAMP,
-      },
-      {
-        id: "inv-turnover",
-        name: "Inventory Turnover",
-        value: 4.2,
-        unit: "x",
-        target: 5,
-        status: "amber",
-        trend: "up",
+        details: ictProjectDeliverySeed,
         comments: [],
         lastUpdated: STATIC_TIMESTAMP,
       },
@@ -1010,11 +955,22 @@ export const initialDepartments: DepartmentData[] = [
   },
   {
     id: "properties-management",
-    name: "Properties Management",
-    shortName: "Properties",
+    name: "Administration and Properties Department",
+    shortName: "Admin & Properties",
     icon: "Warehouse",
-    head: "Properties Manager",
+    head: "Head of Administration and Properties",
     metrics: [
+      {
+        id: "prop-project-delivery",
+        name: "Project Delivery Performance (%)",
+        value: 68,
+        unit: "%",
+        status: "red",
+        trend: "stable",
+        details: propProjectDeliverySeed,
+        comments: [],
+        lastUpdated: STATIC_TIMESTAMP,
+      },
       {
         id: "prop-occupancy",
         name: "Portfolio Occupancy",
@@ -1093,7 +1049,6 @@ export const executiveMetricSources: Record<string, string> = {
   "exec-net-profit": "finance",
   "exec-sales-volume": "sales-marketing",
   "exec-production-alignment": "operations-manufacturing",
-  "exec-inventory-value": "inventory",
   "exec-cash-flow": "finance",
   "exec-debtors": "finance",
   "exec-top-product": "sales-marketing",

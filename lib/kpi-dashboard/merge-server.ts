@@ -3,6 +3,7 @@ import { initialDepartments, initialMDComments } from "@/lib/kpi-dashboard/initi
 import { getDepartmentScorecard } from "@/lib/kpi-dashboard/get-department-scorecard"
 import { executiveMetricSourceDetail } from "@/lib/kpi-dashboard/executive-bindings"
 import type { Comment, DepartmentData, MDComment, MetricData, MetricStatus } from "@/lib/kpi-dashboard/types"
+import { reconcileExpenditureLimitsInDepartments } from "@/lib/kpi-dashboard/expenditure-limit"
 import {
   deriveFinanceInventoryLevelsFromDbRows,
   type FinanceInventoryRow,
@@ -46,6 +47,11 @@ import {
   deriveHrHeadcountFromDbRows,
   type HrHeadcountDbRow,
 } from "@/lib/kpi-dashboard/hr-headcount-metrics"
+import {
+  deriveProcurementMetricYtd,
+  PROCUREMENT_MONTHLY_METRIC_IDS,
+  type ProcurementMonthlyRow,
+} from "@/lib/kpi-dashboard/procurement-monthly-metrics"
 
 export type KpiMetricOverrideRow = {
   segment_id: string
@@ -531,11 +537,34 @@ export async function loadKpiDashboardState(supabase: SupabaseClient): Promise<{
         mHc.value = total
       }
     }
+
+    const procurementSeg = "procurement"
+    const procDept = base.find((d) => d.id === procurementSeg)
+    const procMonthlyRes = await supabase
+      .from("kpi_procurement_metric_monthly")
+      .select("metric_id,month,value_amount,updated_at")
+      .eq("segment_id", procurementSeg)
+      .eq("year", y)
+    const procRows = (procMonthlyRes.data ?? []) as ProcurementMonthlyRow[]
+    if (procDept && !procMonthlyRes.error && procRows.length > 0) {
+      const detailLine =
+        "Headline is the year-to-date sum of monthly entries (current calendar year through the current month)."
+      for (const mid of PROCUREMENT_MONTHLY_METRIC_IDS) {
+        const derived = deriveProcurementMetricYtd(procRows, mid, y, now)
+        const m = procDept.metrics.find((x) => x.id === mid)
+        if (derived && m) {
+          m.value = derived.ytd
+          m.lastUpdated = derived.lastUpdated
+          m.details = detailLine
+        }
+      }
+    }
   } catch {
     // Tables may not exist until migrations 021–028 / 030 are applied.
   }
 
   syncExecutiveFromDepartmentMetrics(base)
+  reconcileExpenditureLimitsInDepartments(base)
 
   const mdFromDb: MDComment[] = mdRows.map((r) => ({
     id: r.id,

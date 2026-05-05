@@ -19,7 +19,7 @@ export default async function PropertiesDashboardPage() {
   return (
     <MinimalDepartmentDashboard
       department="PROPERTIES_MANAGEMENT"
-      departmentLabel="Properties & Administration"
+      departmentLabel="Administration and Properties Department"
       basePath="/dashboard/departments/properties"
     />
   )

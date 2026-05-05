@@ -13,6 +13,8 @@ export interface MetricData {
   value: number | string
   unit?: string
   target?: number
+  /** When `maxLimit`, `target` is the maximum allowed; status is red if numeric `value` exceeds it. */
+  comparison?: "default" | "maxLimit"
   previousValue?: number | string
   status?: MetricStatus
   trend?: "up" | "down" | "stable"

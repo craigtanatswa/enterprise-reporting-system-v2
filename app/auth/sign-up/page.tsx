@@ -192,7 +192,7 @@ export default function SignUpPage() {
                         <SelectItem value="HUMAN_RESOURCES_AND_ADMINISTRATION">
                           Human Resources & Administration
                         </SelectItem>
-                        <SelectItem value="PROPERTIES_MANAGEMENT">Properties Management</SelectItem>
+                        <SelectItem value="PROPERTIES_MANAGEMENT">Administration and Properties Department</SelectItem>
                         <SelectItem value="ICT_AND_DIGITAL_TRANSFORMATION">ICT & Digital Transformation</SelectItem>
                         <SelectItem value="PROCUREMENT">Procurement</SelectItem>
                         <SelectItem value="PUBLIC_RELATIONS">Public Relations</SelectItem>

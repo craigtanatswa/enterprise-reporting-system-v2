@@ -19,7 +19,7 @@ export default async function PropertiesDocumentsPage() {
   return (
     <DepartmentDocumentsPage
       department="PROPERTIES_MANAGEMENT"
-      departmentLabel="Properties & Administration"
+      departmentLabel="Administration and Properties Department"
       basePath="/dashboard/departments/properties"
     />
   )

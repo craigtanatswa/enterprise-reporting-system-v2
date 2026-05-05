@@ -124,6 +124,7 @@ export function getDepartmentSpecificNavigation(department: Department | null, s
       { icon: "BookOpen", label: "Guidelines", href: "/dashboard/departments/procurement/guidelines" },
     ],
     PROPERTIES_MANAGEMENT: [
+      { icon: "LayoutDashboard", label: "KPI Dashboard", href: "/dashboard/kpi" },
       { icon: "LayoutDashboard", label: "Dashboard", href: "/dashboard/departments/properties/dashboard" },
       { icon: "FileText", label: "Documents", href: "/dashboard/departments/properties/documents" },
       { icon: "Archive", label: "Archive / History", href: "/dashboard/departments/properties/archive" },

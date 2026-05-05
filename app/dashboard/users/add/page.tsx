@@ -255,7 +255,7 @@ export default function AdminAddUserPage() {
           <AlertDescription className="text-sm">
             <p className="font-medium text-blue-800 dark:text-blue-400">Corporate Services Manager account</p>
             <p className="text-blue-700 dark:text-blue-500 mt-1">
-              Oversees Marketing, Legal, HR, Properties, and ICT. Only one Corporate Services Manager per system.
+              Oversees Marketing, Legal, HR, Administration and Properties, and ICT. Only one Corporate Services Manager per system.
               Department is set to <strong>Office of Corporate Services</strong>.
             </p>
           </AlertDescription>
@@ -382,7 +382,7 @@ export default function AdminAddUserPage() {
                         <SelectItem value="HUMAN_RESOURCES_AND_ADMINISTRATION">
                           Human Resources & Administration
                         </SelectItem>
-                        <SelectItem value="PROPERTIES_MANAGEMENT">Properties Management</SelectItem>
+                        <SelectItem value="PROPERTIES_MANAGEMENT">Administration and Properties Department</SelectItem>
                         <SelectItem value="ICT_AND_DIGITAL_TRANSFORMATION">ICT & Digital Transformation</SelectItem>
                         <SelectItem value="PROCUREMENT">Procurement</SelectItem>
                         <SelectItem value="PUBLIC_RELATIONS">Public Relations</SelectItem>

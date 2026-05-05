@@ -7,7 +7,6 @@ export const executiveMetricSourceDetail: Record<string, { segmentId: string; me
   "exec-net-profit": { segmentId: "finance", metricId: "fin-net-margin" },
   "exec-sales-volume": { segmentId: "sales-marketing", metricId: "sales-target-actual" },
   "exec-production-alignment": { segmentId: "operations-manufacturing", metricId: "mfg-efficiency" },
-  "exec-inventory-value": { segmentId: "inventory", metricId: "inv-stock-value" },
   "exec-cash-flow": { segmentId: "finance", metricId: "fin-cash-flow" },
   "exec-debtors": { segmentId: "finance", metricId: "fin-debtors-aging" },
   "exec-top-product": { segmentId: "sales-marketing", metricId: "sales-volume-variety" },

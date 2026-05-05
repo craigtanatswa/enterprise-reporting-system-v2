@@ -11,7 +11,7 @@ export type KpiSegmentId =
   | "hr"
   | "procurement"
   | "ict"
-  | "inventory"
+  | "properties-management"
   | "audit-compliance"
 
 export function getKpiSegmentForProfile(
@@ -26,6 +26,7 @@ export function getKpiSegmentForProfile(
   if (department === "HUMAN_RESOURCES_AND_ADMINISTRATION") return "hr"
   if (department === "PROCUREMENT") return "procurement"
   if (department === "ICT_AND_DIGITAL_TRANSFORMATION") return "ict"
+  if (department === "PROPERTIES_MANAGEMENT") return "properties-management"
   if (department === "AUDIT") return "audit-compliance"
   return null
 }

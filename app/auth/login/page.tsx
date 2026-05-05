@@ -48,15 +48,24 @@ export default function LoginPage() {
       if (error) throw error
 
       if (data.user) {
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("role, is_active, department, sub_department")
           .eq("id", data.user.id)
-          .single()
+          .maybeSingle()
+
+        if (profileError) {
+          await supabase.auth.signOut()
+          throw new Error(
+            `Could not load your profile (${profileError.message}). If this persists, check Row Level Security on public.profiles in Supabase.`
+          )
+        }
 
         if (!profile) {
           await supabase.auth.signOut()
-          throw new Error("Profile not found")
+          throw new Error(
+            "Profile not found: your email and password are correct, but there is no row in public.profiles for this account. That usually happens after the profiles table was reset while auth users still exist. In Supabase SQL Editor, run scripts/036_backfill_profiles_missing.sql, then set role and department for your user if needed."
+          )
         }
 
         if (!data.user.email_confirmed_at) {

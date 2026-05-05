@@ -12,6 +12,7 @@ import {
   type HrHeadcountDepartmentKey,
 } from "@/lib/kpi-dashboard/hr-headcount-departments"
 import { hrHeadcountRowsToRecord, type HrHeadcountDbRow } from "@/lib/kpi-dashboard/hr-headcount-metrics"
+import { isProcurementMonthlyMetricId } from "@/lib/kpi-dashboard/procurement-monthly-metrics"
 import { SALES_PRODUCT_VARIETIES } from "@/lib/kpi-dashboard/product-varieties"
 import type { Department, SubDepartment } from "@/lib/utils/permissions"
 import type { UserRole } from "@/lib/utils/permissions"
@@ -74,6 +75,7 @@ export default async function KpiMetricPage({
   let agronomyByVariety: Record<string, AgronomyVarietyData> | undefined
   let mfgTonnesTargetsByVariety: Record<string, number> | undefined
   let hrHeadcountByDepartment: Record<HrHeadcountDepartmentKey, number> | undefined
+  let procurementMonthlyByMonth: Record<number, number> | undefined
 
   if (
     segment === "operations-manufacturing" &&
@@ -277,6 +279,19 @@ export default async function KpiMetricPage({
     }
   }
 
+  if (segment === "procurement" && isProcurementMonthlyMetricId(metricId)) {
+    procurementMonthlyByMonth = {}
+    const { data } = await supabase
+      .from("kpi_procurement_metric_monthly")
+      .select("month, value_amount")
+      .eq("segment_id", segment)
+      .eq("year", reportingYear)
+      .eq("metric_id", metricId)
+    for (const row of data ?? []) {
+      procurementMonthlyByMonth[row.month as number] = Number(row.value_amount)
+    }
+  }
+
   return (
     <KpiMetricDetail
       segmentId={segment}
@@ -292,7 +307,9 @@ export default async function KpiMetricPage({
                 metricId === "mfg-finished-warehouse" ||
                 metricId === "mfg-dispatch")
             ? reportingYear
-            : undefined
+            : segment === "procurement" && isProcurementMonthlyMetricId(metricId)
+              ? reportingYear
+              : undefined
       }
       salesRevenueByMonth={salesRevenueByMonth}
       salesVolumeCells={salesVolumeCells}
@@ -308,6 +325,7 @@ export default async function KpiMetricPage({
       financeProfitabilityByVariety={financeProfitabilityByVariety}
       agronomyByVariety={agronomyByVariety}
       hrHeadcountByDepartment={hrHeadcountByDepartment}
+      procurementMonthlyByMonth={procurementMonthlyByMonth}
     />
   )
 }

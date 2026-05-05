@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import type { MetricStatus } from "@/lib/kpi-dashboard/types"
+import { deriveExpenditureLimitStatus, isMaxLimitMetric } from "@/lib/kpi-dashboard/expenditure-limit"
 import { useKpiDashboard } from "@/components/kpi-dashboard/kpi-dashboard-provider"
 import {
   addKpiDepartmentCommentAction,
@@ -36,6 +37,13 @@ import {
 } from "@/lib/kpi-dashboard/agronomy-metrics"
 import { KpiHrHeadcountDepartmentPanel } from "@/components/kpi-dashboard/kpi-hr-headcount-department-panel"
 import type { HrHeadcountDepartmentKey } from "@/lib/kpi-dashboard/hr-headcount-departments"
+import { KpiProcurementMetricMonthlyPanel } from "@/components/kpi-dashboard/kpi-procurement-metric-monthly-panel"
+import { isProcurementMonthlyMetricId } from "@/lib/kpi-dashboard/procurement-monthly-metrics"
+import {
+  isProjectDeliveryMetricId,
+  parseProjectDeliveryDetails,
+} from "@/lib/kpi-dashboard/project-delivery-metric"
+import { KpiProjectDeliverySections } from "@/components/kpi-dashboard/kpi-project-delivery-sections"
 
 const statusColors: Record<MetricStatus, string> = {
   green: "bg-[oklch(0.6_0.15_145)] text-white",
@@ -60,6 +68,7 @@ export function KpiMetricDetail({
   financeProfitabilityByVariety,
   agronomyByVariety,
   hrHeadcountByDepartment,
+  procurementMonthlyByMonth,
   reportingYear,
 }: {
   segmentId: string
@@ -78,6 +87,7 @@ export function KpiMetricDetail({
   financeProfitabilityByVariety?: Record<string, number>
   agronomyByVariety?: Record<string, AgronomyVarietyData>
   hrHeadcountByDepartment?: Record<HrHeadcountDepartmentKey, number>
+  procurementMonthlyByMonth?: Record<number, number>
   reportingYear?: number
 }) {
   const router = useRouter()
@@ -111,6 +121,10 @@ export function KpiMetricDetail({
     )
   }
 
+  const projectDeliveryDetails = isProjectDeliveryMetricId(metricId)
+    ? parseProjectDeliveryDetails(metric.details)
+    : null
+
   const formatDate = (timestamp: string) =>
     new Date(timestamp).toLocaleDateString("en-US", {
       month: "short",
@@ -120,7 +134,13 @@ export function KpiMetricDetail({
       minute: "2-digit",
     })
 
-  const status = metric.status || "green"
+  const status: MetricStatus =
+    isMaxLimitMetric(metric) &&
+    metric.target != null &&
+    typeof metric.value === "number" &&
+    !Number.isNaN(metric.value)
+      ? deriveExpenditureLimitStatus(metric.value, metric.target)
+      : metric.status || "green"
 
   const submitDeptComment = async () => {
     if (!newComment.trim() || !canEditDepartmentMetrics) return
@@ -214,6 +234,24 @@ export function KpiMetricDetail({
                       <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{metric.details}</p>
                     )}
                   </div>
+                ) : isProjectDeliveryMetricId(metricId) && projectDeliveryDetails ? (
+                  <div className="col-span-2">
+                    <p className="text-sm text-muted-foreground">Share of projects on schedule</p>
+                    <p className="text-3xl font-bold text-foreground">
+                      {metric.value}
+                      {metric.unit && (
+                        <span className="ml-1 text-lg font-normal text-muted-foreground">{metric.unit}</span>
+                      )}
+                    </p>
+                    {projectDeliveryDetails.scheduleLabel.trim() && (
+                      <p className="mt-1 text-sm text-muted-foreground">{projectDeliveryDetails.scheduleLabel}</p>
+                    )}
+                    {projectDeliveryDetails.projectsSummary.trim() && (
+                      <p className="mt-2 text-sm font-medium text-foreground">
+                        Projects: {projectDeliveryDetails.projectsSummary}
+                      </p>
+                    )}
+                  </div>
                 ) : metricId === "hr-headcount" && segmentId === "hr" ? (
                   <div className="col-span-2">
                     <p className="text-sm text-muted-foreground">Total employees (sum by department)</p>
@@ -241,11 +279,14 @@ export function KpiMetricDetail({
                   (metricId === "fin-profitability" && segmentId === "finance") ||
                   (metricId === "mfg-cost-per-tonne" && segmentId === "operations-manufacturing") ||
                   (metricId === "mfg-efficiency" && segmentId === "operations-manufacturing") ||
-                  (metricId === "hr-headcount" && segmentId === "hr")
+                  (metricId === "hr-headcount" && segmentId === "hr") ||
+                  isProjectDeliveryMetricId(metricId)
                 ) &&
                   metric.target != null && (
                   <div>
-                    <p className="text-sm text-muted-foreground">Target</p>
+                    <p className="text-sm text-muted-foreground">
+                      {isMaxLimitMetric(metric) ? "Maximum limit" : "Target"}
+                    </p>
                     <p className="text-3xl font-bold text-foreground">
                       {metric.target}
                       {metric.unit && (
@@ -269,7 +310,8 @@ export function KpiMetricDetail({
                 !(metricId === "fin-profitability" && segmentId === "finance") &&
                 !(metricId === "mfg-cost-per-tonne" && segmentId === "operations-manufacturing") &&
                 !(metricId === "mfg-efficiency" && segmentId === "operations-manufacturing") &&
-                !(metricId === "hr-headcount" && segmentId === "hr") && (
+                !(metricId === "hr-headcount" && segmentId === "hr") &&
+                !isProjectDeliveryMetricId(metricId) && (
                   <div>
                     <p className="text-sm text-muted-foreground">Additional details</p>
                     <p className="text-foreground">{metric.details}</p>
@@ -277,6 +319,20 @@ export function KpiMetricDetail({
                 )}
             </CardContent>
           </Card>
+
+          {isProjectDeliveryMetricId(metricId) && projectDeliveryDetails && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Project delivery breakdown</CardTitle>
+                <CardDescription>
+                  Portfolio, timelines, budgets, issues, and contractor performance
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <KpiProjectDeliverySections data={projectDeliveryDetails} readOnly />
+              </CardContent>
+            </Card>
+          )}
 
           {metricId === "mfg-processed-output" &&
             segmentId === "operations-manufacturing" &&
@@ -483,6 +539,38 @@ export function KpiMetricDetail({
                 onSaved={refresh}
               />
             )}
+
+          {segmentId === "procurement" &&
+            isProcurementMonthlyMetricId(metricId) &&
+            reportingYear != null &&
+            procurementMonthlyByMonth != null &&
+            metric && (
+              <KpiProcurementMetricMonthlyPanel
+                segmentId={segmentId}
+                metricId={metricId}
+                metricTitle={metric.name}
+                year={reportingYear}
+                initialByMonth={procurementMonthlyByMonth}
+                valueFormat={metricId === "proc-reorder" ? "count" : "usd"}
+                canEdit={canEditDepartmentMetrics}
+                onSaved={refresh}
+              />
+            )}
+
+          {segmentId === "procurement" && metricId === "proc-input-status" && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Monthly breakdown</CardTitle>
+                <CardDescription>How this metric is tracked</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  This metric is a qualitative snapshot (availability and coverage). It does not use a month-by-month
+                  numeric series—use the headline and details above.
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           {mdForMetric.length > 0 && (
             <Card className="border-[oklch(0.75_0.12_85)]">
